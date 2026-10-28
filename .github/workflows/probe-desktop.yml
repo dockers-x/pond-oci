@@ -1,0 +1,65 @@
+name: Probe real Pond initialization and shell
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-payload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      CC_x86_64_unknown_linux_musl: musl-gcc
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: pond-oci
+          persist-credentials: false
+      - name: Read exact reviewed inputs
+        id: metadata
+        run: python3 pond-oci/scripts/image-metadata.py --revision "$GITHUB_SHA" --format github >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ca-x/oci-kit
+          ref: ${{ steps.metadata.outputs.kit_revision }}
+          path: oci-kit
+          persist-credentials: false
+      - name: Install runner-only fixture dependencies
+        run: sudo apt-get update && sudo apt-get install -y musl-tools libarchive-tools bubblewrap xvfb imagemagick
+      - run: rustup toolchain install stable --profile minimal --target x86_64-unknown-linux-musl
+      - name: Build reviewed static Rust commands only on GitHub
+        run: cargo +stable build --locked --release --manifest-path oci-kit/Cargo.toml --workspace --bins --target x86_64-unknown-linux-musl
+      - name: Download the verified locked rootfs only on GitHub
+        env:
+          ROOTFS_FETCH: ${{ github.workspace }}/oci-kit/target/x86_64-unknown-linux-musl/release/rootfs-fetch
+        run: bash pond-oci/scripts/fetch-rootfs.sh --locked
+      - name: Prepare a disposable runtime root, never an image build context
+        env:
+          ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$(uname -m)" == x86_64 ]]
+          df -h "$RUNNER_TEMP"
+          root="$RUNNER_TEMP/pond-runtime-fixture"
+          tools="$GITHUB_WORKSPACE/oci-kit/target/x86_64-unknown-linux-musl/release"
+          sudo install -d -m 0755 "$root"
+          sudo bsdtar --numeric-owner --acls --xattrs -xpf "pond-oci/.cache/$ROOTFS_SHA256/pond-rootfs.tar.zst" -C "$root"
+          sudo "$tools/rootfs-cleaner" mark --root "$root"
+          sudo "$tools/rootfs-cleaner" clean --root "$root" --policy pond-oci/profiles/cleanup.toml --apply
+          sudo "$tools/lighos-init" install --root "$root" --config pond-oci/profiles/lightos.toml
+      - name: Exercise actual keyring initialization and unchanged native Pond config
+        run: |
+          sudo env GITHUB_ACTIONS=true RUNNER_TEMP="$RUNNER_TEMP" \
+            /usr/bin/python3 pond-oci/scripts/probe-desktop.py \
+            --root "$RUNNER_TEMP/pond-runtime-fixture" \
+            --report "$RUNNER_TEMP/pond-runtime-report"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: pond-real-payload-report
+          path: ${{ runner.temp }}/pond-runtime-report
+          if-no-files-found: ignore
+          retention-days: 7

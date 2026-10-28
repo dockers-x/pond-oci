@@ -1,5 +1,23 @@
 # Work log
 
+## 2026-10-29 — Real payload initialization and native shell experiment
+
+- Active goal remains a working LightOS image with normal initialization, not
+  CLI-only completion. Previous turn is progress: source and exact-profile
+  integration changed and passed real GitHub execution and independent review.
+- Add a manual GitHub-only real-payload probe. Build the locked static Rust
+  tools, verify/extract a fresh rootfs, apply real cleanup/profile installation,
+  then isolate the runtime fixture from host PID, mount and network state.
+- Model only observed platform prerequisites with synthetic identity/account;
+  run the real Rust hook twice against Pond's actual GPG keyring. Preserve skel
+  and run native Niri without --session on a private Xvfb display; require a
+  Pond/Quickshell non-background layer and nonuniform screenshot, not empty Niri.
+- Runtime fixture changes are never reused as an OCI build context. Upload
+  bounded reports only, clear command environments, and terminate owned
+  fixture processes on every exit. Remoted owner development stays deferred.
+- This experiment is not actual LightOS systemd/proxy acceptance. The current
+  instance lacks the external /lzcinit/lightosctl interface; do not bypass app
+  authorization with sudo or private credentials. No image is declared complete.
 ## 2026-10-28 — Explicit render-group recipe regression
 
 - After accepting ordering, specify the next integration seam before changing
