@@ -13,6 +13,45 @@ SPEC.loader.exec_module(PROBE)
 
 
 class DesktopProbeTests(unittest.TestCase):
+    def test_initialize_uses_niri_validate_subcommand_before_its_config_option(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "root"
+            report = Path(directory) / "report"
+            report.mkdir()
+            for program in ("niri", "qs", "setpriv", "dbus-run-session", "useradd", "pacman-key"):
+                path = root / "usr/bin" / program
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+            config = root / PROBE.CONFIG.lstrip("/")
+            config.parent.mkdir(parents=True)
+            config.touch()
+            home = root / f"home/{PROBE.USER}"
+            original_stat = Path.stat
+
+            def fixture_stat(path, *arguments, **keywords):
+                metadata = original_stat(path, *arguments, **keywords)
+                if path == home:
+                    metadata = mock.Mock(wraps=metadata, st_uid=PROBE.USER_ID)
+                return metadata
+
+            changed = iter((True, False))
+
+            def run(arguments, **_keywords):
+                if arguments[0] == "/usr/local/bin/lighos-init":
+                    return mock.Mock(stdout='{"changed":' + str(next(changed)).lower() + '}')
+                if arguments[0] == "/usr/bin/niri":
+                    if arguments != ["/usr/bin/niri", "validate", "--config", PROBE.CONFIG]:
+                        raise RuntimeError("Niri rejects global config with validate subcommand")
+                return mock.Mock(stdout="")
+
+            probe = PROBE.Probe(root, report)
+            probe.run = mock.Mock(side_effect=run)
+            with mock.patch.object(Path, "stat", autospec=True, side_effect=fixture_stat), \
+                    mock.patch.object(PROBE.os, "chown"):
+                evidence = probe.initialize()
+            self.assertTrue(evidence["first_apply_changed"])
+            probe.run.assert_any_call(["/usr/bin/niri", "validate", "--config", PROBE.CONFIG], user=True)
+
     def test_empty_compositor_and_wallpaper_do_not_pass_as_the_pond_shell(self):
         self.assertEqual(PROBE.pond_layers([]), [])
         self.assertEqual(PROBE.pond_layers([

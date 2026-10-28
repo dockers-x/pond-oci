@@ -8,6 +8,9 @@
 - Add a GitHub-only existing-report inspection workflow and bounded automatic
   diagnostic tails. Inspect the previous report before adapting the command;
   do not download runtime artifacts to the user's desktop or rerun blindly.
+- Upstream Niri v26.04 `src/cli.rs` declares global arguments conflicting with
+  subcommands, while Validate owns its own config option. Add an initializer
+  regression for `niri validate --config PATH` before correcting invocation.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
