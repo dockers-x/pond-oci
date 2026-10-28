@@ -1,5 +1,22 @@
 # Work log
 
+## 2026-10-28 — Preserve the native Pond shell, not just its compositor
+
+- Source validation `40676461617` passed after the development-SemVer fix.
+- The previous audit's top-level Niri config includes shell/config.kdl plus
+  cfg/autostart.kdl. Its shell directory is an absolute link to
+  `/usr/share/pond-interface/config/niri/shell`; inspecting only config.kdl
+  cannot establish that the actual Pond shell/autostart is preserved.
+- Extend only the read-only GitHub audit to include these regular KDL files
+  and skel user units, with a 64-file/256-KiB text budget. Do not follow the
+  archived symlink or execute payload programs. This is not image packaging.
+- Upstream Niri v26.04 source exposes a Winit nested backend selected by an
+  existing display; its headless backend is internal test infrastructure, not
+  a public CLI mode. `--session` deliberately removes parent display variables.
+  A prospective no-VT remote adapter must not use it for nested startup or
+  silently replace Niri/Pond with the existing Hyprland owner. Runtime capture,
+  input, shell and persistent-session tests remain required.
+
 ## 2026-10-28 — Pond source and headless OCI recipe
 
 - Kept distribution-specific logic here: upstream release discovery, exact

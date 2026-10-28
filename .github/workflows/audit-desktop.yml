@@ -43,6 +43,7 @@ jobs:
               "usr/bin/uwsm", "usr/lib/systemd/user/niri.service", "usr/lib/systemd/user/niri-shutdown.target",
               "usr/lib/systemd/user/graphical-session.target", "usr/lib/systemd/system/seatd.service",
               "usr/share/wayland-sessions", "etc/pam.d", "etc/skel/.config/niri",
+              "usr/share/pond-interface/config/niri", "etc/skel/.config/systemd/user",
               "etc/systemd/system/display-manager.service",
           )
           arguments = [argument for prefix in prefixes for argument in ("--select", prefix)]
@@ -56,7 +57,13 @@ jobs:
               "etc/pam.d/runuser", "etc/pam.d/system-login", "etc/skel/.config/niri/config.kdl",
           }
           texts = [entry["path"] for entry in inventory["selected"]
-                   if entry["path"] in candidates and entry["kind"] == "file" and entry["size"] <= 65536]
+                   if entry["kind"] == "file" and entry["size"] <= 65536 and (
+                       entry["path"] in candidates
+                       or (entry["path"].startswith(("etc/skel/.config/niri/", "usr/share/pond-interface/config/niri/"))
+                           and entry["path"].endswith(".kdl"))
+                       or entry["path"].startswith("etc/skel/.config/systemd/user/"))]
+          if len(texts) > 64 or sum(entry["size"] for entry in inventory["selected"] if entry["path"] in texts) > 262144:
+              raise SystemExit("desktop configuration audit exceeds its bounded text budget")
           if "usr/share/wayland-sessions/niri.desktop" not in texts:
               raise SystemExit("the locked payload must provide a readable Niri desktop entry")
           text_arguments = [argument for path in texts for argument in ("--text", path)]
