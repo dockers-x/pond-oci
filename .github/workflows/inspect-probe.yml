@@ -43,7 +43,7 @@ jobs:
           token="$(cat /proc/sys/kernel/random/uuid)"
           trap 'printf "::%s::\n" "$token"' EXIT
           printf '::stop-commands::%s\n' "$token"
-          for name in evidence.json commands.log desktop.log xvfb.log pond-ipc.txt; do
+          for name in evidence.json commands.log desktop.log xvfb.log x11-connect.log pond-ipc.txt; do
             path="$RUNNER_TEMP/probe-report/$name"
             if [[ -f "$path" && ! -L "$path" ]]; then
               printf '\n--- %s ---\n' "$name"

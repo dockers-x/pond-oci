@@ -214,7 +214,9 @@ class Probe:
             "--setenv", "LIBGL_ALWAYS_SOFTWARE", "1",
             "--setenv", "QT_QPA_PLATFORM", "wayland",
         ]
+        self.run(["/usr/bin/stat", "-c", "%a %u:%g %F %n", "/tmp", "/tmp/.X11-unix", parent_socket], user=True, extra=extra)
         command = self.command(["/usr/bin/dbus-run-session", "--", "/usr/bin/niri", "--config", CONFIG], user=True, extra=extra)
+        command = [shutil.which("strace"), "-f", "-e", "trace=connect", "-o", str(self.report / "x11-connect.log"), *command]
         with (self.report / "desktop.log").open("wb") as log:
             process = subprocess.Popen(command, stdout=log, stderr=log, env=self.environment, start_new_session=True)
             try:
@@ -287,7 +289,7 @@ def main():
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.geteuid() != 0:
         parser.error("this experiment requires an ephemeral GitHub runner as root")
     validate_fixture(arguments.root, arguments.report, Path(os.environ["RUNNER_TEMP"]))
-    for program in ("bwrap", "Xvfb", "identify"):
+    for program in ("bwrap", "Xvfb", "identify", "strace"):
         if not shutil.which(program):
             parser.error(f"missing runner dependency: {program}")
     arguments.report.mkdir(parents=True, exist_ok=True)

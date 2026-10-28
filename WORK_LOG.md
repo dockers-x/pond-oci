@@ -19,6 +19,11 @@
   Independent readonly review reports no P1/P2. Address its two P3s: suppress
   workflow-command interpretation during diagnostic printing, and require a
   completed probe-workflow origin plus print its SHA before historical reads.
+- Real run `40732626280` at `fa19516` proves actual initialization
+  changed=true/false, UID1000 home and unchanged Niri configuration validity.
+  Desktop then panics with XOpenDisplayFailed before shell startup. Xvfb only
+  reports nonfatal xkb warnings. Add user-context socket/ancestor metadata and
+  runner-only connect tracing to locate this fixture boundary before fixing it.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
