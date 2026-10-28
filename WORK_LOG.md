@@ -15,6 +15,10 @@
   initializer regression (29 cases, one error, one expected toolkit skip).
   Move the config option into the validate subcommand; require source GREEN
   before dispatching the next real-payload probe.
+- GREEN `40732235594` validates source and the actual locked Rust/profile.
+  Independent readonly review reports no P1/P2. Address its two P3s: suppress
+  workflow-command interpretation during diagnostic printing, and require a
+  completed probe-workflow origin plus print its SHA before historical reads.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 

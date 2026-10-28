@@ -61,6 +61,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          token="$(cat /proc/sys/kernel/random/uuid)"
+          trap 'printf "::%s::\n" "$token"' EXIT
+          printf '::stop-commands::%s\n' "$token"
           for name in evidence.json commands.log desktop.log xvfb.log pond-ipc.txt; do
             path="$RUNNER_TEMP/pond-runtime-report/$name"
             if [[ -f "$path" && ! -L "$path" ]]; then
