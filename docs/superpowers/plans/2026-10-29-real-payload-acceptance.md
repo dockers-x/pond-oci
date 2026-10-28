@@ -27,7 +27,9 @@ is the locked distribution payload, not more mock coverage or remoted research.
    or run an empty hand-written desktop config. Require the real Pond shell's
    non-background layer, an actual Niri socket/executable and a nonuniform
    screenshot; report launcher IPC diagnostics for the next acceptance step.
-5. Upload only bounded synthetic-fixture reports/screenshots. Never upload or
+5. Upload only synthetic-fixture reports/screenshots, not runtime roots. Screenshot
+   and command-report tails are bounded; live process logs still need byte caps.
+   Never upload or
    package the mutated runtime root, and never download it to the user's host.
    Dispose of every fixture process even on failure.
 

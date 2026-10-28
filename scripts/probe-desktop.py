@@ -71,7 +71,7 @@ def pond_layers(layers):
         raise ValueError("Niri layer response must be a list")
     return [layer for layer in layers if isinstance(layer, dict)
             and isinstance(layer.get("namespace"), str)
-            and layer["namespace"].lower().startswith(("pond", "quickshell"))
+            and layer["namespace"] == "quickshell"
             and layer.get("layer") in ("Top", "Bottom", "Overlay")]
 
 
@@ -258,9 +258,23 @@ class Probe:
                 if min(width, height) < 100 or colors < 16:
                     raise RuntimeError("desktop screenshot is missing, too small or uniform")
                 native = "/" + endpoint.relative_to(self.root).as_posix()
-                diagnostic = self.run(["/usr/bin/env", f"NIRI_SOCKET={native}", "/usr/bin/qs", "-c", "pond-shell", "ipc", "show"], user=True, timeout=15, check=False)
-                (self.report / "pond-ipc.txt").write_text(diagnostic.stdout[-16000:] + diagnostic.stderr[-16000:])
-                return {"layers": layers, "outputs": outputs, "frame": {"width": width, "height": height, "colors": colors}, "launcher_ipc_diagnostic_exit": diagnostic.returncode}
+                diagnostic = {"exit_code": None, "timed_out": False}
+                try:
+                    result = self.run(["/usr/bin/env", f"NIRI_SOCKET={native}", "/usr/bin/qs", "-c", "pond-shell", "ipc", "show"], user=True, timeout=15, check=False)
+                    diagnostic["exit_code"] = result.returncode
+                    fragments = (result.stdout, result.stderr)
+                except subprocess.TimeoutExpired as error:
+                    diagnostic["timed_out"] = True
+                    fragments = (error.stdout, error.stderr)
+                text = "".join(fragment.decode(errors="replace") if isinstance(fragment, bytes) else fragment or "" for fragment in fragments)
+                (self.report / "pond-ipc.txt").write_text(text[-16000:])
+                time.sleep(1)
+                if process.poll() is not None:
+                    raise RuntimeError("native Niri exited after its first frame")
+                layers = request(endpoint, "Layers").get("Layers", [])
+                if not pond_layers(layers):
+                    raise RuntimeError("Pond shell panel disappeared after its first frame")
+                return {"layers": layers, "outputs": outputs, "frame": {"width": width, "height": height, "colors": colors}, "launcher_ipc_diagnostic": diagnostic}
             finally:
                 stop(process)
 

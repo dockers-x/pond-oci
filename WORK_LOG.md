@@ -27,6 +27,16 @@
 - The namespace is an explicit strict probe expectation, not evidence that the
   locked payload has met it. The real run must demonstrate its actual layer;
   a mismatch fails rather than widening admission to arbitrary named panels.
+- RED `40727974228` at `967b066` reproduces all intended assertions: a lost
+  panel incorrectly returns success, diagnostic timeout escapes, and lookalike
+  namespaces are admitted. Tighten exact matching, re-check process/layer
+  after screenshot and diagnostics, and record an optional diagnostic timeout
+  without discarding verified frame evidence. Require fresh source GREEN.
+- Final: minor (deferred): cap all live log/capture buffers, not merely tails
+  written to the command report. This trusted, timeout-bounded experiment is
+  not a claim that every log file is byte-bounded.
+- Final: minor (deferred): mocked TERM-to-KILL and rejected-peer identity cases.
+  Real owned process cleanup and peer verification remain required in the run.
 ## 2026-10-28 — Explicit render-group recipe regression
 
 - After accepting ordering, specify the next integration seam before changing
