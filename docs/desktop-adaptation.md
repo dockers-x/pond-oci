@@ -67,6 +67,11 @@ remote settings may still be missing or disabled.
   render character metadata and emits additive numeric group policy before
   systemd loads units; it never changes device permissions or account/auth
   state. Groups are group-wide rights, not single-device ACLs.
+- The recipe's render policy passed `40720297613` at `a86cbdd`, after
+  missing-generator RED `40718944905`. Source checks and the actual locked
+  Rust CLI/profile installation both pass; fresh integration review found no
+  P1/P2. Installed-profile readback is a deferred coverage improvement, not
+  evidence of a current serialization defect.
 
 ## Remaining gates
 

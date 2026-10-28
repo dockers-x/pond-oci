@@ -19,8 +19,17 @@
   device-isolation wording is clarified because numeric groups are group-wide.
 - Select exactly `30f76519e9d3c809c892fa1d71e1f8a23d87c577` and opt both
   canonical services into mapped render groups. Offline installation creates
-  the same-binary generator link, never a runtime group policy. Recipe GREEN
-  and integration review await the next run; no Dockerfile or build dispatch.
+  the same-binary generator link, never a runtime group policy. No Dockerfile
+  change or image-build dispatch is part of this phase.
+- GREEN: recipe `a86cbddf0f385a89585e3f410629f70ffb886824` passes source and
+  real-toolkit/profile jobs in GitHub `40720297613`. Independent integration
+  review finds no P1/P2; both existing/absent-settings scenarios install twice.
+- Final: minor (deferred): compare the installed profile's parsed contents to
+  the source profile, including render_node_services. Static review confirms
+  the locked serializer preserves that field; this is not a current defect.
+- Keep the group's actual permission scope explicit and leave actual service
+  credentials/GPU, complete shell, persistent Niri owner and platform proxy
+  acceptance open. No source/fixture result is a graphical release claim.
 
 ## 2026-10-28 — Resume recipe-to-toolkit desktop ordering
 

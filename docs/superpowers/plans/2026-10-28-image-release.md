@@ -78,3 +78,10 @@ OCI archive and registry copy tooling available only on the runner.
   actual-toolkit/profile acceptance after observed RED `40710876277`; fresh
   review found no P1/P2. Task 3 remains open: offline ordering is not device,
   full Pond shell, persistent Niri owner or platform runtime acceptance.
+- Numeric render-group generator `30f7651` passes full toolkit run
+  `40718742320`, 49 Rust/20 isolated chroot tests and independent review. Pond
+  `a86cbdd` selects it and opts in both canonical services; actual recipe
+  validation `40720297613` passes after missing-generator RED `40718944905`,
+  with no P1/P2 integration finding. Task 3 still requires actual process/GPU,
+  full shell and persistent native owner/platform acceptance; no OCI build or
+  publication resumes in this stage.
