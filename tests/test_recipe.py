@@ -45,6 +45,10 @@ class RecipeTests(unittest.TestCase):
                 "lightos-remote-desktop.service",
                 "lightos-remote-desktop-session.service",
             ],
+            "render_node_services": [
+                "lightos-remote-desktop.service",
+                "lightos-remote-desktop-session.service",
+            ],
         })
 
     def test_build_downloads_the_reviewed_lock_without_refreshing_it(self):

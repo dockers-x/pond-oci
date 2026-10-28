@@ -1,5 +1,16 @@
 # Work log
 
+## 2026-10-28 — Explicit render-group recipe regression
+
+- After accepting ordering, specify the next integration seam before changing
+  the profile or toolkit pin: opt both canonical services into numeric mapped
+  render-node groups and require the same Rust binary's generator symlink.
+- The recipe still selects accepted toolkit `e682f78`, which has no generator;
+  observe that meaningful source/real-CLI RED remotely. The toolkit's new
+  capability must finish its independent CI/review before this recipe selects
+  it. Do not generate device policy during offline install or restore the
+  suspended image build; mapped devices belong to runtime, not an OCI layer.
+
 ## 2026-10-28 — Resume recipe-to-toolkit desktop ordering
 
 - Ruling: native remoted-owner research stays deferred. Resume the existing

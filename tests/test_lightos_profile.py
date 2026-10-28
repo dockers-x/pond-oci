@@ -51,6 +51,10 @@ class LightOSProfileTests(unittest.TestCase):
                 for relative in (f"etc/systemd/system/{service}", f"etc/systemd/system/multi-user.target.wants/{service}"):
                     path = root / relative
                     self.assertFalse(path.exists() or path.is_symlink())
+            generator = root / "usr/lib/systemd/system-generators/lighos-init-generator"
+            self.assertTrue(generator.is_symlink(), "missing Rust render-group generator")
+            self.assertEqual(generator.readlink(), Path("/usr/local/bin/lighos-init"))
+            self.assertFalse((root / "run/systemd/generator").exists())
             unit = (root / "etc/systemd/system/lighos-init.service").read_text()
             self.assertIn("AssertPathExists=/var/lib/lightos/initialized", unit)
             self.assertNotIn("ConditionPathExists=/var/lib/lightos/initialized", unit)
