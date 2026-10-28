@@ -31,3 +31,13 @@
 The user requests `ub-mode` and a commit/push after each verified phase.
 Source publishing is not proof of OCI construction, redistribution rights or
 successful LightOS account/keyring/Niri/VT/PAM/logind startup.
+
+## 2026-10-28 — Source publication over SSH
+
+- HTTPS attempts timed out; the final response also reported that the OAuth token
+  lacks the scope required for workflow-file pushes. The user requests SSH.
+- Existing SSH configuration authenticates as `czyt` through `ssh.github.com:443`.
+  Changed origin to `git@github.com:dockers-x/pond-oci.git` and successfully pushed
+  initial source commit `8dac799` to `main`, with `origin/main` tracking configured.
+- No rootfs, cache, image or user credentials are in the pushed source. Runtime
+  and OCI construction are still pending and are not inferred from push success.
