@@ -4,3 +4,7 @@ post_setup_services = [
   "lightos-remote-desktop.service",
   "lightos-remote-desktop-session.service",
 ]
+render_node_services = [
+  "lightos-remote-desktop.service",
+  "lightos-remote-desktop-session.service",
+]

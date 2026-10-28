@@ -10,6 +10,17 @@
   capability must finish its independent CI/review before this recipe selects
   it. Do not generate device policy during offline install or restore the
   suspended image build; mapped devices belong to runtime, not an OCI layer.
+- RED: source `86c1d1414759fef74a0a653dfd0690a59b8acdcd`, GitHub
+  `40718944905`: source rejects the missing explicit policy and both existing/
+  absent-settings CLI scenarios report `missing Rust render-group generator`.
+- The mechanism gate is now GREEN: toolkit `30f7651`, full Actions
+  `40718742320`, stable/MSRV/static-runtime all pass, including 49 Rust tests
+  per required build and 20 chroot cases. Independent review finds no P1/P2;
+  device-isolation wording is clarified because numeric groups are group-wide.
+- Select exactly `30f76519e9d3c809c892fa1d71e1f8a23d87c577` and opt both
+  canonical services into mapped render groups. Offline installation creates
+  the same-binary generator link, never a runtime group policy. Recipe GREEN
+  and integration review await the next run; no Dockerfile or build dispatch.
 
 ## 2026-10-28 — Resume recipe-to-toolkit desktop ordering
 

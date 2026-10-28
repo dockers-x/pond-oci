@@ -103,6 +103,13 @@ LightOS 控制面 → /etc/lightos/seed.env → 平台 lightos-setup.service
 当前只确认过平台消费端，没有审计 UI 生产端，不能假定存在 `LIGHTOS_LOCALE` 等额外字段。
 Pond 的 `/etc/skel` 随 rootfs 保留，用于平台创建账号时提供默认配置。
 `lighos-init` 的额外 keyring 是非秘密配方配置，不是另一份用户凭据协议。
+配方显式把两个 canonical remote services 接到 `lighos-init.service` 之后，
+但不替平台 enable/start，也不代表远程设置已经到齐或用户已启用远程桌面。
+同一 Rust binary 的 `lighos-init-generator` 在 systemd 加载 unit 之前运行，
+按已映射 render 字符节点的数字 GID 为这两个服务生成临时 supplementary group
+drop-in；它不修改账号、设备权限或认证。没有 render 节点时不生成规则，保留软件图形路径。
+该授权是 group-wide，不保证同 GID 的其他资源被隔离；不从 card/input/TTY 采集 GID。
+生成策略和离线安装通过不等于实际 systemd/GPU、完整 Pond 桌面或代理链路已验收。
 ISO installer 的 SSH patch 是对“解包后配置”的修改，不会修改已发布 rootfs；本项目不照抄它来冒充镜像适配。
 
 ## 验收与发布边界

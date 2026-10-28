@@ -60,6 +60,13 @@ remote settings may still be missing or disabled.
   is now selected by this recipe and exercised against the actual Pond profile
   in the separate `toolkit-profile` validation job. That job does not build an
   image or start a service.
+- Numeric render-group mechanism `30f7651` passed full toolkit Actions
+  `40718742320` and independent review: 49 Rust tests per required build and
+  20 isolated chroot cases. This recipe now selects that exact revision and
+  explicitly opts both canonical services in. Its generator inspects mapped
+  render character metadata and emits additive numeric group policy before
+  systemd loads units; it never changes device permissions or account/auth
+  state. Groups are group-wide rights, not single-device ACLs.
 
 ## Remaining gates
 
@@ -76,7 +83,9 @@ remote settings may still be missing or disabled.
    upgrade leaves the desktop and its applications alive. The user deferred
    further remoted-owner work; do not substitute its current Hyprland owner or
    treat an empty Niri instance as completion.
-4. Finish explicit device policy without changing host device permissions.
+4. Verify the explicit device policy on actual service processes without
+   changing host device permissions. Numeric-policy generation is accepted,
+   but real process credentials/GPU rendering have not been exercised here.
    Bind-mounted GPU groups are numeric identities, not necessarily the named
    video/render groups in the rootfs. Apply authorization to the actual owner
    and transport separately. Software rendering must not require a physical VT.
