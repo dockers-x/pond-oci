@@ -1,5 +1,14 @@
 # Work log
 
+## 2026-10-29 — Observe the real-payload failure before changing behavior
+
+- Probe `40729655376` completed with failure: installed Niri rejects the
+  `validate` positional argument. Download, extraction, actual keyring commands
+  and two hook applications reached this point; desktop execution did not.
+- Add a GitHub-only existing-report inspection workflow and bounded automatic
+  diagnostic tails. Inspect the previous report before adapting the command;
+  do not download runtime artifacts to the user's desktop or rerun blindly.
+
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
 - Active goal remains a working LightOS image with normal initialization, not

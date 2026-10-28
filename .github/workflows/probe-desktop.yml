@@ -56,6 +56,18 @@ jobs:
             /usr/bin/python3 pond-oci/scripts/probe-desktop.py \
             --root "$RUNNER_TEMP/pond-runtime-fixture" \
             --report "$RUNNER_TEMP/pond-runtime-report"
+      - name: Print bounded runtime diagnostic tails
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in evidence.json commands.log desktop.log xvfb.log pond-ipc.txt; do
+            path="$RUNNER_TEMP/pond-runtime-report/$name"
+            if [[ -f "$path" && ! -L "$path" ]]; then
+              printf '\n--- %s ---\n' "$name"
+              sudo tail -c 24000 -- "$path"
+            fi
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
