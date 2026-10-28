@@ -50,3 +50,15 @@ jobs:
               tail -c 24000 -- "$path"
             fi
           done
+      - name: Inspect the existing bounded screenshot on GitHub only
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="$RUNNER_TEMP/probe-report/pond-desktop.png"
+          if [[ -f "$image" && ! -L "$image" ]]; then
+            [[ "$(stat -c %s -- "$image")" -le 8388608 ]]
+            sudo apt-get update -qq
+            sudo apt-get install -y imagemagick
+            timeout 15s identify -limit memory 128MiB -limit map 256MiB \
+              -format 'width=%w height=%h colors=%k\n' "$image"
+          fi

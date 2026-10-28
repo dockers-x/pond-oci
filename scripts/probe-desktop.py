@@ -258,8 +258,9 @@ class Probe:
                         time.sleep(0.1)
                 result = subprocess.run([shutil.which("identify"), "-limit", "memory", "128MiB", "-limit", "map", "256MiB", "-format", "%w %h %k", str(copied_image)], capture_output=True, text=True, timeout=10, check=True, env=self.environment)
                 width, height, colors = map(int, result.stdout.split())
+                (self.report / "frame.json").write_text(json.dumps({"width": width, "height": height, "colors": colors}) + "\n")
                 if min(width, height) < 100 or colors < 16:
-                    raise RuntimeError("desktop screenshot is missing, too small or uniform")
+                    raise RuntimeError(f"desktop screenshot is too small or uniform: {width}x{height}, {colors} colors")
                 native = "/" + endpoint.relative_to(self.root).as_posix()
                 diagnostic = {"exit_code": None, "timed_out": False}
                 try:

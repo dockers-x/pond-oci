@@ -40,6 +40,11 @@
   creating its own sockets. Use the standard 1777 mode on this private tmpfs
   only, retaining the single parent-socket bind and leaving host/rootfs modes
   unchanged. No screenshot, launcher, systemd or LightOS success yet claimed.
+- Source/profile `40736809617` passes; independent review again finds no
+  P1/P2. Runtime `40737041062` reaches the real panel and creates its PNG but
+  rejects frame dimensions/colors. Keep the same threshold, expose actual
+  metrics, and inspect that existing report's PNG only on GitHub before
+  diagnosing rendering or startup timing. Do not claim first-frame acceptance.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
