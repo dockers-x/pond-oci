@@ -75,18 +75,26 @@ remote settings may still be missing or disabled.
 
 ## Remaining gates
 
+The actual locked payload now passes init and native-frame fixtures:
+40738943260 verifies keyring idempotence, the original Niri configuration,
+pond-sidebar/Top and a 1280x800/7999-color image after two frame requests.
+40782166125 additionally selects wayland-1 by the same authenticated Niri
+PID/UID and obtains a real Quickshell IPC query with exit0 (6743-color image).
+This is not a launcher click/app-start or real systemd/LightOS acceptance.
+
 1. Recipe wiring passed GitHub run `40713790188` at `9b0d20e` after the
    missing-ordering RED in `40710876277`: both settings scenarios install
    twice, preserving package units and leaving remote services unenabled.
    Independent review found no P1/P2. Existing masks and syscall-level
    no-auth-read coverage are deferred improvements; this is offline evidence,
    not a boot or late-settings runtime acceptance.
-2. Verify Pond shell/launcher startup and useful failure diagnostics. No real
-   seed or platform authentication is needed or permitted in those fixtures.
+2. Native shell startup, actual rendered frame and display-bound IPC query
+   pass. Launcher/app-start interaction remains open. No real seed or platform
+   authentication is needed or permitted in those fixtures.
 3. A persistent native Niri owner remains required: preserve per-user includes
    and the compositor's application environment, and prove reconnect/transport
    upgrade leaves the desktop and its applications alive. The user deferred
-   further remoted-owner work; do not substitute its current Hyprland owner or
+   further remoted-owner research; do not substitute its current Hyprland owner or
    treat an empty Niri instance as completion.
 4. Verify the explicit device policy on actual service processes without
    changing host device permissions. Numeric-policy generation is accepted,

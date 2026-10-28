@@ -13,6 +13,11 @@
   the optional timeout behavior and the final real panel/process check.
 - Add selection tests rejecting another PID/UID, stale sockets, links, lock
   files and an unverified IPC endpoint. This does not claim launcher interaction.
+- Source/profile GREEN 40781851858 at c193671; independent review has no
+  P1/P2. Real payload GREEN 40782166125: verified wayland-1, 1280x800 with
+  6743 colors after two attempts, query exit0. Exposes installs, volume,
+  sidebar.toggle, brightness and media targets. This proves a real query,
+  not launcher selection or app-start interaction. Preserve that distinction.
 
 ## 2026-10-29 — Observe the real-payload failure before changing behavior
 
