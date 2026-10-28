@@ -200,3 +200,26 @@ class DesktopProbeTests(unittest.TestCase):
             self.assertEqual(evidence["frame"]["colors"], 2048)
             self.assertTrue(evidence["launcher_ipc_diagnostic"]["timed_out"])
             self.assertIn("partial diagnostic", (probe.report / "pond-ipc.txt").read_text())
+
+    def test_mapped_panel_waits_for_a_nonuniform_frame_instead_of_accepting_or_failing_the_first_blank(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.graphical_fixture(Path(directory))
+            captures = []
+
+            def respond(_endpoint, message):
+                if message == "Layers":
+                    return {"Layers": [{"namespace": "pond-sidebar", "layer": "Top"}]}
+                if message == "Outputs":
+                    return {"Outputs": {"winit": {}}}
+                captures.append(message)
+                return "Handled"
+
+            results = [
+                subprocess.CompletedProcess([], 0, "1280 800 1", ""),
+                subprocess.CompletedProcess([], 0, "1280 800 2048", ""),
+            ]
+            with mock.patch.object(PROBE, "request", side_effect=respond), \
+                    mock.patch.object(PROBE.subprocess, "run", side_effect=results):
+                evidence = probe.graphical_session("99")
+            self.assertEqual(evidence["frame"]["colors"], 2048)
+            self.assertEqual(len(captures), 2)

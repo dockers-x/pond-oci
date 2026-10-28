@@ -45,6 +45,10 @@
   rejects frame dimensions/colors. Keep the same threshold, expose actual
   metrics, and inspect that existing report's PNG only on GitHub before
   diagnosing rendering or startup timing. Do not claim first-frame acceptance.
+- GitHub-only existing-report inspection `40737817253` verifies source SHA
+  and measures the saved PNG: 1280x800, exactly one color. A mapped layer is
+  not yet a rendered frame. Add a regression requiring bounded frame readiness
+  (first blank, then nonuniform), without relaxing the dimensions/color gate.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
