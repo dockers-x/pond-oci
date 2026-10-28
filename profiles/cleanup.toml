@@ -1,0 +1,49 @@
+schema_version = 1
+
+[[remove]]
+path = "etc/machine-id"
+reason = "Machine identity must be generated per instance"
+
+[[remove]]
+path = "var/lib/dbus/machine-id"
+reason = "Do not share D-Bus identity between instances"
+
+[[remove]]
+path = "var/lib/systemd/random-seed"
+reason = "Do not clone machine-specific random seeds"
+
+[[remove]]
+path = "var/lib/lightos/initialized"
+reason = "A new instance must run platform account initialization"
+
+[[remove]]
+path = "var/lib/oci-kit"
+reason = "A new instance must run its own post-setup hook"
+
+[[remove]]
+path = "var/cache/pacman/pkg"
+reason = "Downloaded package archives are not installed package payloads"
+
+[[remove]]
+path = "etc/ssh/ssh_host_rsa_key"
+reason = "SSH host private keys must be unique per instance"
+
+[[remove]]
+path = "etc/ssh/ssh_host_rsa_key.pub"
+reason = "Remove the matching machine-specific public host key"
+
+[[remove]]
+path = "etc/ssh/ssh_host_ecdsa_key"
+reason = "SSH host private keys must be unique per instance"
+
+[[remove]]
+path = "etc/ssh/ssh_host_ecdsa_key.pub"
+reason = "Remove the matching machine-specific public host key"
+
+[[remove]]
+path = "etc/ssh/ssh_host_ed25519_key"
+reason = "SSH host private keys must be unique per instance"
+
+[[remove]]
+path = "etc/ssh/ssh_host_ed25519_key.pub"
+reason = "Remove the matching machine-specific public host key"

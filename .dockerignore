@@ -1,0 +1,6 @@
+.git
+.cache
+.build
+tests
+scripts
+__pycache__

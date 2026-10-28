@@ -1,0 +1,10 @@
+{
+  "metadata": {
+    "upstream_path": "src/backend/model.py",
+    "upstream_repository": "https://github.com/bflycomputer/iso-installer",
+    "upstream_revision": "79724644c5119f6543ab6a56bf9614a241e461d2"
+  },
+  "schema_version": 1,
+  "sha256": "8236724d38f0041132220548095ed43f00119ef62c99dcbe24316ec6ccb14001",
+  "url": "https://releases.butterfly.so/rootfs/8236724d38f0041132220548095ed43f00119ef62c99dcbe24316ec6ccb14001/pond-rootfs.tar.zst"
+}
