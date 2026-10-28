@@ -1,7 +1,8 @@
 # pond-oci
 
 Pond rootfs → OCI 的薄配方，使用 `ca-x/oci-kit`，不修改上游 ISO installer。
-**当前为实验性、默认 headless 的 systemd/rootfs 构建配方；还不是经过 LightOS 物理桌面验收的成品。**
+**唯一交付目标是带 Niri 桌面的 LightOS 镜像，不提供 headless 版本。**
+旧 headless 构建工作流已暂停，不能将其构建成功当作桌面完成；桌面适配与验收正在补齐。
 
 ## 分工
 
@@ -14,12 +15,11 @@ Pond rootfs → OCI 的薄配方，使用 `ca-x/oci-kit`，不修改上游 ISO i
 
 **所有下载、依赖安装、Rust 编译、OCI 打包及运行验收均在 GitHub Actions 完成。**
 本地只编辑、审阅和通过 SSH 推送源码，以及查看工作流状态；不在本机下载 rootfs 或构建产物。
-使用已经完成 CLI 验收的精确 toolkit commit 触发远程构建：
+当前先对锁定的真实 payload 进行远程桌面入口审计，不触发旧 headless 镜像构建：
 
 ```sh
-gh workflow run build.yml --repo dockers-x/pond-oci --ref main \
-  -f kit_revision=daaf5723d13ab93999c7c325752ff5ef77c81733
-gh run list --repo dockers-x/pond-oci --workflow build.yml
+gh workflow run audit-desktop.yml --repo dockers-x/pond-oci --ref main
+gh run list --repo dockers-x/pond-oci --workflow audit-desktop.yml
 ```
 
 工作流在 runner 中 checkout toolkit、编译 `rootfs-fetch`，再运行
@@ -59,12 +59,16 @@ digest="$(python3 -c 'import json; print(json.load(open("rootfs.lock.json"))["sh
 它不是包卸载器，保留 pacman 数据库完整性；更激进的包精简需要真实 rootfs 审计后的独立配方。
 禁止把清理工具指向正在运行的系统。
 已核验的真实 payload 摘要见 `docs/rootfs-audit.md`；机器身份清理不代表软件包已卸载。
-`profiles/masked-units.txt` 是 **Pond 配方**的 headless 服务策略：
-关闭 SDDM/getty/seatd 的自动物理显示接管，以及网络重配置、防火墙、时间调整、
-无线监管域、引导更新、磁盘裁剪/快照等宿主控制操作。保留 systemd-resolved 和应用内容，
-默认启动 `multi-user.target`。这些不是通用清理器内置规则，也不是完整的 GUI 适配。
+`profiles/masked-units.txt` 是 **Pond 配方**的初版容器隔离策略，正在按桌面目标复核。
+网络重配置、防火墙、时间调整、无线监管域、引导更新、磁盘裁剪/快照等宿主控制操作
+不能因为需要桌面就全部开启。SDDM/getty 不应自行抢占 VT；必须补齐 LightOS 分配的
+终端与 Niri 会话接入。是否由受控会话启动 seatd，要根据实际 Niri seat backend 验证。
+保留 systemd-resolved、桌面、skel 和应用内容；仅有掩码清单不是完整的 GUI 适配。
 
 ## 镜像构建
+
+原构建入口暂时关闭：下面描述的是已成功构建过的初版处理方式，不是当前可发布的桌面成品。
+先完成 Rust adapter 的桌面相关能力与 GitHub 验收，再恢复桌面镜像打包和双 registry 发布。
 
 Actions runner 提供 Docker + Buildx，以及相邻的 `oci-kit` 源码。
 工作流通过以下内部入口构建；脚本不安装/启动本机 daemon，

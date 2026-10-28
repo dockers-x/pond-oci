@@ -1,0 +1,65 @@
+name: Audit Pond desktop payload
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: pond-oci
+      - name: Read locked image inputs
+        id: metadata
+        run: python3 pond-oci/scripts/image-metadata.py --revision "$GITHUB_SHA" --format github >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ca-x/oci-kit
+          ref: ${{ steps.metadata.outputs.kit_revision }}
+          path: oci-kit
+      - run: rustup toolchain install stable --profile minimal
+      - run: cargo +stable build --locked --release --manifest-path oci-kit/Cargo.toml -p oci-kit --bin rootfs-fetch --bin rootfs-inspect
+      - env:
+          ROOTFS_FETCH: ${{ github.workspace }}/oci-kit/target/release/rootfs-fetch
+        run: bash pond-oci/scripts/fetch-rootfs.sh --locked
+      - name: Inspect desktop entry points without executing rootfs programs
+        env:
+          ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+
+          archive = Path("pond-oci/.cache") / os.environ["ROOTFS_SHA256"] / "pond-rootfs.tar.zst"
+          command = ["oci-kit/target/release/rootfs-inspect", "--archive", str(archive)]
+          prefixes = (
+              "usr/bin/niri-session", "usr/bin/niri", "usr/bin/seatd", "usr/bin/runuser",
+              "usr/bin/uwsm", "usr/lib/systemd/user/niri.service", "usr/lib/systemd/user/niri-shutdown.target",
+              "usr/lib/systemd/user/graphical-session.target", "usr/lib/systemd/system/seatd.service",
+              "usr/share/wayland-sessions", "etc/pam.d", "etc/skel/.config/niri",
+              "etc/systemd/system/display-manager.service",
+          )
+          arguments = [argument for prefix in prefixes for argument in ("--select", prefix)]
+          inventory = json.loads(subprocess.check_output(command + arguments, text=True))
+          Path("pond-oci/.cache/desktop-inventory.json").write_text(json.dumps(inventory, indent=2))
+          print(json.dumps({"entries": inventory["entries"], "selected": inventory["selected"]}, indent=2))
+          candidates = {
+              "usr/bin/niri-session", "usr/lib/systemd/user/niri.service", "usr/lib/systemd/user/niri-shutdown.target",
+              "usr/lib/systemd/user/graphical-session.target", "usr/lib/systemd/system/seatd.service",
+              "usr/share/wayland-sessions/niri.desktop", "etc/pam.d/login", "etc/pam.d/runuser-l",
+              "etc/pam.d/runuser", "etc/pam.d/system-login", "etc/skel/.config/niri/config.kdl",
+          }
+          texts = [entry["path"] for entry in inventory["selected"]
+                   if entry["path"] in candidates and entry["kind"] == "file" and entry["size"] <= 65536]
+          if "usr/share/wayland-sessions/niri.desktop" not in texts:
+              raise SystemExit("the locked payload must provide a readable Niri desktop entry")
+          text_arguments = [argument for path in texts for argument in ("--text", path)]
+          report = json.loads(subprocess.check_output(command + text_arguments, text=True))
+          print(json.dumps({"desktop_text": report["text"]}, indent=2))
+          PY

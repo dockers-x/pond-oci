@@ -78,6 +78,33 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   invalid identifiers and safe GitHub outputs. This test-first phase is sent to
   Actions before implementing the new CLI; no test runs on this host.
 
+## 2026-10-28 — Desktop-only scope correction
+
+- User explicitly rejects headless, including an optional headless deliverable.
+  The intended product is the Pond/Niri desktop. The original headless default
+  was an implementation scoping mistake, not a user requirement. Suspend that
+  workflow and all publication until the desktop adapter gate is satisfied.
+- Source fix `bd02679` passed all 13 tests remotely in run `40667293537`.
+  The SemVer process tests observed the absent metadata CLI in run `40667512586`;
+  implement it without publishing a tag or image, and verify only in Actions.
+- Retrieved the original Claude thread `ext-claude-raj37m` and re-read the
+  first-principles/ponzS research. Its useful desktop mechanisms are allocated
+  VT waiting, controlling-terminal seatd, device numeric groups, runuser-l
+  PAM/logind and user D-Bus. Hyprland/UWSM launch commands are not Niri commands.
+- Read current unit states and Omarchy launcher source without modifying any
+  host service or reading seed credentials. Listed non-template units are not
+  running, but some are enabled/inactive rather than disabled or masked; the
+  existing console unit is restarting, so it is not proof of a working desktop.
+- Independent read-only service review agrees: retain host-isolation masks,
+  replace autonomous SDDM/getty display control with a LightOS-specific session,
+  verify the seat backend, and do not blindly enable Bluetooth or ananicy.
+- Added a GitHub-only payload audit of the actual Niri desktop entry, session
+  wrapper, user service, PAM and skel. It uses the accepted Rust fetch/inspect
+  tools, does not execute rootfs programs and uploads no rootfs/image artifact.
+- Reopen the CLI gate for new desktop support in `lighos-init` before resuming
+  packaging, as required by the user's original ordering constraint. This is
+  separate from SemVer/source validation and from real target display testing.
+
 ## 2026-10-28 — Source publication over SSH
 
 - HTTPS attempts timed out; the final response also reported that the OAuth token

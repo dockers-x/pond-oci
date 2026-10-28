@@ -1,5 +1,9 @@
 # Image build and release contract
 
+- Desktop-only: deliver Pond's Niri desktop on LightOS. Do not offer or publish
+  headless as a substitute. Preserve the desktop stack and `/etc/skel`; supply
+  the real LightOS device/VT/PAM/logind/D-Bus/session integration before claiming
+  completion. The superseded headless workflow is suspended.
 - All rootfs/dependency downloads, builds and executable acceptance run in
   GitHub Actions. Local work edits/reviews source, pushes over SSH and reads
   workflow status/logs. Do not download rootfs or image artifacts locally.
@@ -26,6 +30,9 @@
   during this static artifact check. Report what was actually checked.
 - OCI construction/publication does not prove real LightOS seed/account/SSH,
   GPG-update or Niri/VT/PAM/logind startup. Keep those acceptance limits visible.
+- The original CLI completion gate covered keyring-only initialization. New
+  desktop adapter functionality reopens the tool gate: implement and verify it
+  before resuming image packaging. Do not bypass it with recipe shell scripts.
 
 Commands initiated locally only dispatch or inspect GitHub workflows. Tests,
 tool compilation, rootfs fetching and image construction commands in other
