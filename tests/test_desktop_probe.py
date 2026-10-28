@@ -235,3 +235,24 @@ class DesktopProbeTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "stayed too small or uniform"):
                     probe.capture_frame(probe.root / "niri.sock", process)
             self.assertIn('"colors": 1', (probe.report / "frame.json").read_text())
+
+    def test_launcher_query_uses_the_verified_compositor_wayland_socket(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.graphical_fixture(Path(directory))
+            endpoint = probe.root / f"run/user/{PROBE.USER_ID}/niri.wayland-0.42.sock"
+            wayland = endpoint.parent / "wayland-7"
+
+            def respond(_endpoint, message):
+                if message == "Layers":
+                    return {"Layers": [{"namespace": "pond-sidebar", "layer": "Top"}]}
+                if message == "Outputs":
+                    return {"Outputs": {"winit": {}}}
+                return "Handled"
+
+            with mock.patch.object(PROBE, "request", side_effect=respond), \
+                    mock.patch.object(PROBE, "wayland_socket", create=True, return_value=wayland) as verified:
+                probe.graphical_session("99")
+            queries = [call.args[0] for call in probe.run.call_args_list if "/usr/bin/qs" in call.args[0]]
+            self.assertEqual(len(queries), 1)
+            self.assertIn("WAYLAND_DISPLAY=wayland-7", queries[0])
+            verified.assert_called_once_with(probe.root, endpoint)

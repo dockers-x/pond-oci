@@ -1,5 +1,12 @@
 # Work log
 
+## 2026-10-29 — Bind launcher diagnostics to the real compositor display
+
+- Runtime 40738943260 reports a real Quickshell instance on wayland-1 but
+  exit255 for a cleared diagnostic environment whose display is "unk". Add
+  a high-level regression requiring WAYLAND_DISPLAY from a verified compositor
+  socket, not from an IPC filename convention or hard-coded wayland-0/1.
+
 ## 2026-10-29 — Observe the real-payload failure before changing behavior
 
 - Probe `40729655376` completed with failure: installed Niri rejects the
