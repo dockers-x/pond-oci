@@ -98,6 +98,24 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
 - Independent read-only service review agrees: retain host-isolation masks,
   replace autonomous SDDM/getty display control with a LightOS-specific session,
   verify the seat backend, and do not blindly enable Bluetooth or ananicy.
+
+## 2026-10-28 — Desktop payload evidence and safe package preinstallation
+
+- Source CI `40669441987` at `33226a0` passed. The payload audit
+  `40669733311` also passed without executing target programs: Niri's desktop
+  entry invokes niri-session, the user unit invokes niri --session, and PAM
+  runuser-l includes system-login/pam_systemd. These checks do not prove a GUI.
+- Read local remote-desktop source, then fast-forwarded that clean source
+  checkout over SSH to actual remote main `b086a3f`/release v0.1.21. No binary
+  or rootfs is downloaded here. Installed host v0.1.20 is not the newest release.
+- Ordinary package hooks generate authentication and start the virtual owner.
+  User explicitly permits improving/releasing that program and AUR. Its new
+  test-first staging contract is tracked in that source repository; keep all
+  executable verification on GitHub and preserve the existing service names.
+- Extended this read-only workflow to record actual Pond dependency/FFmpeg
+  SONAME metadata and actual AUR commits, and to read the pinned ponzS VT guard.
+  No PKGBUILD, rootfs executable, native installer or package hook is executed.
+  The desktop adapter gate stays open and no image publication is resumed.
 - Added a GitHub-only payload audit of the actual Niri desktop entry, session
   wrapper, user service, PAM and skel. It uses the accepted Rust fetch/inspect
   tools, does not execute rootfs programs and uploads no rootfs/image artifact.

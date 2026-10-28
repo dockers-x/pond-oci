@@ -65,3 +65,11 @@ OCI archive and registry copy tooling available only on the runner.
   correction `bd02679` passed all 13 tests in run `40667293537`.
 - Metadata process tests at `77911aa` failed in run `40667512586` because the new
   CLI did not yet exist. Implementation and its green remote evidence follow.
+- Metadata implementation `33226a0` passed source run `40669441987`. Desktop
+  audit run `40669733311` succeeded: the real entry is `niri-session`, which
+  starts the user `niri.service` (`niri --session`); runuser-l includes
+  system-login/pam_systemd. This is payload evidence, not a boot result.
+- User authorizes extending `lighos-init` and modifying/releasing upstream
+  lightos-remote-desktop/AUR when needed. Investigating explicit package staging
+  first: ordinary AUR hooks generate auth and activate a Cage/Hyprland owner,
+  which cannot run in an image build or substitute for Pond/Niri.

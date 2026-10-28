@@ -63,3 +63,46 @@ jobs:
           report = json.loads(subprocess.check_output(command + text_arguments, text=True))
           print(json.dumps({"desktop_text": report["text"]}, indent=2))
           PY
+      - name: Audit package versions and FFmpeg SONAME links without running rootfs programs
+        env:
+          ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+
+          archive = Path("pond-oci/.cache") / os.environ["ROOTFS_SHA256"] / "pond-rootfs.tar.zst"
+          command = ["oci-kit/target/release/rootfs-inspect", "--archive", str(archive)]
+          selections = ["var/lib/pacman/local", "usr/lib/libavcodec.so", "usr/lib/libavutil.so", "usr/lib/libswscale.so"]
+          inventory = json.loads(subprocess.check_output(command + [part for path in selections for part in ("--select", path)], text=True))
+          names = {"ffmpeg", "niri", "hyprland", "aquamarine", "hyprutils", "libdisplay-info", "seatd", "glibc", "systemd", "pipewire", "lightos-remoted-bin", "lightos-codec-ffmpeg-bin"}
+          descriptions = []
+          for entry in inventory["selected"]:
+              path = Path(entry["path"])
+              if path.name == "desc" and path.parent.name.rsplit("-", 2)[0] in names and entry["kind"] == "file":
+                  descriptions.append(str(path))
+          report = json.loads(subprocess.check_output(command + [part for path in descriptions for part in ("--text", path)], text=True))
+          print(json.dumps({"package_descriptions": report["text"], "ffmpeg_links": [entry for entry in inventory["selected"] if entry["path"].startswith("usr/lib/")]}, indent=2))
+          PY
+      - name: Read the actual AUR commits and upstream VT guard without installing them
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          import urllib.request
+
+          results = {}
+          for name in ("lightos-remoted-bin", "lightos-codec-ffmpeg-bin"):
+              destination = Path("pond-oci/.cache") / name
+              subprocess.run(["git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/" + name + ".git", str(destination)], check=True)
+              revision = subprocess.check_output(["git", "-C", str(destination), "rev-parse", "HEAD"], text=True).strip()
+              results[name] = {"revision": revision, "files": {path: (destination / path).read_text() for path in (".SRCINFO", "PKGBUILD", name + ".install")}}
+          revision = "dc6bd423e38fd88b7e5c5c72117213d35685fd6a"
+          url = "https://raw.githubusercontent.com/ponzS/omarchy/" + revision + "/container/lightos-seatd-vt-guard.c"
+          with urllib.request.urlopen(url, timeout=30) as response:
+              results["ponzS_vt_guard"] = {"revision": revision, "source": response.read(65537).decode()}
+          print(json.dumps(results, indent=2))
+          PY
