@@ -73,6 +73,10 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   incorrectly returning zero, and an unprocessed final unit without newline.
   Corrected the workflow to `--locked`, retained the final line and explicitly
   propagated every failed mask. The green follow-up must also run on GitHub.
+- Added subprocess acceptance for the new image metadata CLI: development and
+  release SemVer identities, exact tag match, locked rootfs/toolkit provenance,
+  invalid identifiers and safe GitHub outputs. This test-first phase is sent to
+  Actions before implementing the new CLI; no test runs on this host.
 
 ## 2026-10-28 — Source publication over SSH
 
