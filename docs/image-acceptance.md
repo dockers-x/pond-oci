@@ -2,8 +2,10 @@
 
 - Desktop-only: deliver Pond's Niri desktop on LightOS. Do not offer or publish
   headless as a substitute. Preserve the desktop stack and `/etc/skel`; supply
-  the real LightOS device/VT/PAM/logind/D-Bus/session integration before claiming
-  completion. The superseded headless workflow is suspended.
+  real Niri/Pond shell startup, capture/input and LightOS proxy authentication
+  before claiming completion. A virtual graphical desktop is not a headless
+  deliverable. Physical VT mode is optional and has separate mapped-device,
+  PAM/logind/D-Bus acceptance. The superseded headless workflow is suspended.
 - All rootfs/dependency downloads, builds and executable acceptance run in
   GitHub Actions. Local work edits/reviews source, pushes over SSH and reads
   workflow status/logs. Do not download rootfs or image artifacts locally.
@@ -29,7 +31,8 @@
   installed hook and retained rootfs metadata. Do not execute rootfs programs
   during this static artifact check. Report what was actually checked.
 - OCI construction/publication does not prove real LightOS seed/account/SSH,
-  GPG-update or Niri/VT/PAM/logind startup. Keep those acceptance limits visible.
+  GPG-update or Niri/Pond startup. Remote graphical and physical VT/PAM/logind
+  acceptance are distinct; keep both limits visible.
 - The original CLI completion gate covered keyring-only initialization. New
   desktop adapter functionality reopens the tool gate: implement and verify it
   before resuming image packaging. Do not bypass it with recipe shell scripts.

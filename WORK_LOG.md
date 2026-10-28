@@ -16,6 +16,11 @@
   A prospective no-VT remote adapter must not use it for nested startup or
   silently replace Niri/Pond with the existing Hyprland owner. Runtime capture,
   input, shell and persistent-session tests remain required.
+- Audit `40683134808` succeeded: the preserved shell config actually launches
+  `qs -c pond-shell`; skel's personal autostart contains only a commented example.
+  Record the native desktop boundary and remaining gates in
+  `docs/desktop-adaptation.md`. Correct acceptance wording so physical VT is
+  not incorrectly mandatory for a fully graphical remote instance.
 
 ## 2026-10-28 — Pond source and headless OCI recipe
 
