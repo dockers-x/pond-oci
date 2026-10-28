@@ -15,3 +15,26 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - run: python3 -m unittest discover -s tests -v
       - run: bash -n scripts/fetch-rootfs.sh scripts/build.sh
+  toolkit-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: pond-oci
+      - name: Read the recipe's locked toolkit revision
+        id: metadata
+        run: python3 pond-oci/scripts/image-metadata.py --revision "$GITHUB_SHA" --format github >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ca-x/oci-kit
+          ref: ${{ steps.metadata.outputs.kit_revision }}
+          path: oci-kit
+      - run: rustup toolchain install stable --profile minimal
+      - name: Build the actual offline Rust commands on GitHub
+        run: cargo +stable build --locked --manifest-path oci-kit/Cargo.toml --workspace --bin lighos-init --bin rootfs-cleaner
+      - name: Install the Pond profile into an isolated staging fixture
+        env:
+          LIGHTOS_INIT_BINARY: ${{ github.workspace }}/oci-kit/target/debug/lighos-init
+          ROOTFS_CLEANER_BINARY: ${{ github.workspace }}/oci-kit/target/debug/rootfs-cleaner
+        run: python3 -m unittest discover -s pond-oci/tests -p test_lightos_profile.py -v

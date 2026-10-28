@@ -1,5 +1,20 @@
 # Work log
 
+## 2026-10-28 — Resume recipe-to-toolkit desktop ordering
+
+- Ruling: native remoted-owner research stays deferred. Resume the existing
+  toolkit/Pond plan without restoring the old headless image build.
+- The accepted toolkit supports post-setup ordering, but this recipe still
+  locks the earlier toolkit and omits both canonical desktop services from its
+  initialization profile. Wire the existing Rust capability before new features.
+- Add a real command-line regression: GitHub builds the recipe's locked toolkit,
+  marks an isolated rootfs with rootfs-cleaner, then installs the actual Pond
+  profile twice with lighos-init. Require both ordering drop-ins, preserved
+  package units/opaque platform settings, no activation and no runtime marker.
+- Strengthen the source profile contract before changing the profile or toolkit
+  lock. RED must be observed remotely; no image/rootfs download, local toolkit
+  build, host service operation or successful desktop boot is implied.
+
 ## 2026-10-28 — Preserve the native Pond shell, not just its compositor
 
 - Source validation `40676461617` passed after the development-SemVer fix.

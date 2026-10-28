@@ -38,7 +38,14 @@ class RecipeTests(unittest.TestCase):
 
     def test_init_profile_has_no_user_credentials(self):
         profile = tomllib.loads((ROOT / "profiles/lightos.toml").read_text())
-        self.assertEqual(profile, {"schema_version": 1, "pacman_keyrings": ["pond"]})
+        self.assertEqual(profile, {
+            "schema_version": 1,
+            "pacman_keyrings": ["pond"],
+            "post_setup_services": [
+                "lightos-remote-desktop.service",
+                "lightos-remote-desktop-session.service",
+            ],
+        })
 
     def test_build_downloads_the_reviewed_lock_without_refreshing_it(self):
         workflow = (ROOT / ".github/workflows/build.yml").read_text()
