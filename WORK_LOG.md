@@ -18,6 +18,15 @@
 - This experiment is not actual LightOS systemd/proxy acceptance. The current
   instance lacks the external /lzcinit/lightosctl interface; do not bypass app
   authorization with sudo or private credentials. No image is declared complete.
+- Source validation `40726881695` passes at `c584c63`. Fresh static review
+  nevertheless finds two P2s before dispatch: a panel that disappears after
+  the initial observation can pass with colorful wallpaper, and an optional
+  launcher diagnostic timeout incorrectly discards desktop evidence. Add
+  high-level mocked probe regressions and tighten the panel namespace admission
+  to exact `quickshell`; observe their source RED before changing the probe.
+- The namespace is an explicit strict probe expectation, not evidence that the
+  locked payload has met it. The real run must demonstrate its actual layer;
+  a mismatch fails rather than widening admission to arbitrary named panels.
 ## 2026-10-28 — Explicit render-group recipe regression
 
 - After accepting ordering, specify the next integration seam before changing
