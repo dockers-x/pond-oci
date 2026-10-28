@@ -183,7 +183,7 @@ class Probe:
         runtime = fixture_directory(self.root, f"run/user/{USER_ID}")
         runtime.chmod(0o700)
         os.chown(runtime, USER_ID, USER_ID)
-        self.run(["/usr/bin/niri", "--config", CONFIG, "validate"], user=True)
+        self.run(["/usr/bin/niri", "validate", "--config", CONFIG], user=True)
         return {"first_apply_changed": True, "second_apply_changed": False, "home_uid": USER_ID}
 
     def desktop(self):

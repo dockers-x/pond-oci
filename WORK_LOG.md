@@ -11,6 +11,10 @@
 - Upstream Niri v26.04 `src/cli.rs` declares global arguments conflicting with
   subcommands, while Validate owns its own config option. Add an initializer
   regression for `niri validate --config PATH` before correcting invocation.
+- RED `40731682925` fails precisely at the rejected invocation in the new
+  initializer regression (29 cases, one error, one expected toolkit skip).
+  Move the config option into the validate subcommand; require source GREEN
+  before dispatching the next real-payload probe.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
