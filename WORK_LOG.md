@@ -116,6 +116,10 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   SONAME metadata and actual AUR commits, and to read the pinned ponzS VT guard.
   No PKGBUILD, rootfs executable, native installer or package hook is executed.
   The desktop adapter gate stays open and no image publication is resumed.
+- Independent metadata review found one P2: a numeric SHA prefix beginning with
+  zero creates an invalid numeric SemVer prerelease identifier. Added a process
+  regression for revision `012345678901` before changing version generation;
+  source Actions must observe its failure and the correction remotely.
 - Added a GitHub-only payload audit of the actual Niri desktop entry, session
   wrapper, user service, PAM and skel. It uses the accepted Rust fetch/inspect
   tools, does not execute rootfs programs and uploads no rootfs/image artifact.

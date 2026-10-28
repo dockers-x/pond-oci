@@ -54,6 +54,15 @@ class ImageMetadataTests(unittest.TestCase):
                 self.assertEqual(result.stdout, "")
                 self.assertIn("release tag", result.stderr)
 
+    def test_numeric_revision_prefix_with_a_leading_zero_is_valid_semver(self):
+        revision = "012345678901" + "a" * 28
+        result = self.metadata("--revision", revision)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        version = json.loads(result.stdout)["version"]
+        identifiers = version.split("-", 1)[1].split(".")
+        for identifier in identifiers:
+            self.assertFalse(identifier.isdecimal() and len(identifier) > 1 and identifier.startswith("0"), version)
+
     def test_formal_version_is_strict_semver_without_an_upstream_hash(self):
         for version in ("01.2.3", "1.2", "v1.2.3", "20261028", "a" * 64, "1.2.3+hash"):
             with self.subTest(version=version):
