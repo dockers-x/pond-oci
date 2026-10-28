@@ -1,5 +1,7 @@
 import importlib.util
+import os
 from pathlib import Path
+import socket
 import subprocess
 import tempfile
 import unittest
@@ -147,6 +149,7 @@ class DesktopProbeTests(unittest.TestCase):
             ("stop", mock.Mock()),
             ("niri_socket", mock.Mock(return_value=endpoint)),
             ("copy_screenshot", mock.Mock()),
+            ("wayland_socket", mock.Mock(return_value=endpoint.parent / "wayland-7")),
         ):
             patcher = mock.patch.object(PROBE, name, replacement)
             patcher.start()
@@ -256,3 +259,41 @@ class DesktopProbeTests(unittest.TestCase):
             self.assertEqual(len(queries), 1)
             self.assertIn("WAYLAND_DISPLAY=wayland-7", queries[0])
             verified.assert_called_once_with(probe.root, endpoint)
+
+    def test_wayland_selection_rejects_other_peers_stale_sockets_and_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            owner = os.getuid()
+            runtime = root / f"run/user/{owner}"
+            runtime.mkdir(parents=True)
+            endpoint = runtime / "niri.control.sock"
+            for number in range(1, 5):
+                connection = socket.socket(socket.AF_UNIX)
+                self.addCleanup(connection.close)
+                connection.bind(str(runtime / f"wayland-{number}"))
+            (runtime / "wayland-0").symlink_to(runtime / "wayland-4")
+            (runtime / "wayland-0.lock").touch()
+
+            def credentials(path):
+                if path.name == "wayland-1":
+                    return 99, owner, 0
+                if path.name == "wayland-2":
+                    return 42, owner + 1, 0
+                if path.name == "wayland-3":
+                    raise ConnectionRefusedError("stale fixture socket")
+                return 42, owner, 0
+
+            with mock.patch.object(PROBE, "USER_ID", owner), \
+                    mock.patch.object(PROBE, "niri_peer", return_value=(42, owner)), \
+                    mock.patch.object(PROBE, "socket_peer", side_effect=credentials) as peer:
+                self.assertEqual(PROBE.wayland_socket(root, endpoint), runtime / "wayland-4")
+            self.assertNotIn(mock.call(runtime / "wayland-0"), peer.call_args_list)
+            self.assertNotIn(mock.call(runtime / "wayland-0.lock"), peer.call_args_list)
+
+    def test_wayland_selection_requires_a_verified_niri_endpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(PROBE, "niri_peer", return_value=None), \
+                    mock.patch.object(PROBE, "socket_peer") as peer:
+                self.assertIsNone(PROBE.wayland_socket(root, root / "untrusted.sock"))
+            peer.assert_not_called()

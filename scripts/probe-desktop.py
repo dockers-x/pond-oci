@@ -87,22 +87,53 @@ def request(path, message):
         return decode_reply(json.loads(line))
 
 
+def socket_peer(path):
+    with socket.socket(socket.AF_UNIX) as connection:
+        connection.settimeout(1)
+        connection.connect(str(path))
+        return struct.unpack("3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+
+
+def niri_peer(root, path):
+    metadata = path.lstat()
+    if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != USER_ID:
+        return None
+    expected = (root / "usr/bin/niri").stat()
+    process, owner, _group = socket_peer(path)
+    executable = Path(f"/proc/{process}/exe").stat()
+    process_root = Path(f"/proc/{process}/root").stat()
+    fixture_root = root.stat()
+    if owner == USER_ID and (executable.st_dev, executable.st_ino) == (expected.st_dev, expected.st_ino) \
+            and (process_root.st_dev, process_root.st_ino) == (fixture_root.st_dev, fixture_root.st_ino):
+        return process, owner
+    return None
+
+
 def niri_socket(root):
     runtime = root / f"run/user/{USER_ID}"
-    expected = (root / "usr/bin/niri").stat()
     for path in sorted(runtime.glob("niri.*.sock")):
-        metadata = path.lstat()
-        if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != USER_ID:
+        if niri_peer(root, path):
+            return path
+    return None
+
+
+def wayland_socket(root, endpoint):
+    try:
+        expected = niri_peer(root, endpoint)
+    except OSError:
+        return None
+    if expected is None:
+        return None
+    runtime = root / f"run/user/{USER_ID}"
+    for path in sorted(runtime.glob("wayland-*")):
+        try:
+            metadata = path.lstat()
+            if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != USER_ID:
+                continue
+            process, owner, _group = socket_peer(path)
+        except OSError:
             continue
-        with socket.socket(socket.AF_UNIX) as connection:
-            connection.settimeout(1)
-            connection.connect(str(path))
-            process, owner, _group = struct.unpack("3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
-        executable = Path(f"/proc/{process}/exe").stat()
-        process_root = Path(f"/proc/{process}/root").stat()
-        fixture_root = root.stat()
-        if owner == USER_ID and (executable.st_dev, executable.st_ino) == (expected.st_dev, expected.st_ino) \
-                and (process_root.st_dev, process_root.st_ino) == (fixture_root.st_dev, fixture_root.st_ino):
+        if (process, owner) == expected:
             return path
     return None
 
@@ -274,11 +305,14 @@ class Probe:
                 outputs = request(endpoint, "Outputs").get("Outputs", {})
                 if not outputs:
                     raise RuntimeError("native Niri has no output")
+                wayland = wayland_socket(self.root, endpoint)
+                if wayland is None:
+                    raise RuntimeError("no Wayland socket belongs to the verified native Niri peer")
                 frame = self.capture_frame(endpoint, process)
                 native = "/" + endpoint.relative_to(self.root).as_posix()
                 diagnostic = {"exit_code": None, "timed_out": False}
                 try:
-                    result = self.run(["/usr/bin/env", f"NIRI_SOCKET={native}", "/usr/bin/qs", "-c", "pond-shell", "ipc", "show"], user=True, timeout=15, check=False)
+                    result = self.run(["/usr/bin/env", f"NIRI_SOCKET={native}", f"WAYLAND_DISPLAY={wayland.name}", "/usr/bin/qs", "-c", "pond-shell", "ipc", "show"], user=True, timeout=15, check=False)
                     diagnostic["exit_code"] = result.returncode
                     fragments = (result.stdout, result.stderr)
                 except subprocess.TimeoutExpired as error:
@@ -292,7 +326,7 @@ class Probe:
                 layers = request(endpoint, "Layers").get("Layers", [])
                 if not pond_layers(layers):
                     raise RuntimeError("Pond shell panel disappeared after its first frame")
-                return {"layers": layers, "outputs": outputs, "frame": frame, "launcher_ipc_diagnostic": diagnostic}
+                return {"layers": layers, "outputs": outputs, "wayland_display": wayland.name, "frame": frame, "launcher_ipc_diagnostic": diagnostic}
             finally:
                 stop(process)
 

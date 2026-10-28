@@ -6,6 +6,13 @@
   exit255 for a cleared diagnostic environment whose display is "unk". Add
   a high-level regression requiring WAYLAND_DISPLAY from a verified compositor
   socket, not from an IPC filename convention or hard-coded wayland-0/1.
+- RED 40781383581 fails exactly because WAYLAND_DISPLAY=wayland-7 is absent
+  from the launcher query. Revalidate the Niri IPC peer's UID/executable/root,
+  then accept only a non-symlink Wayland socket with the same kernel PID/UID.
+  Pass that verified basename to the cleared diagnostic environment; retain
+  the optional timeout behavior and the final real panel/process check.
+- Add selection tests rejecting another PID/UID, stale sockets, links, lock
+  files and an unverified IPC endpoint. This does not claim launcher interaction.
 
 ## 2026-10-29 — Observe the real-payload failure before changing behavior
 
