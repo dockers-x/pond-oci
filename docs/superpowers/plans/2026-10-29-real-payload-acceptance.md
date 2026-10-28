@@ -71,3 +71,16 @@ is the locked distribution payload, not more mock coverage or remoted research.
   the previously unverified `quickshell` namespace expectation with this exact
   panel/layer pair, not a name prefix. Give the private X11 tmpfs standard 1777
   permissions so xwayland-satellite can create its own sockets as UID1000.
+- `40737041062` maps the real panel and saves a PNG but the frame gate fails.
+  GitHub-only report inspector `40737817253` measures 1280x800/one color.
+  Layer mapping is not first-frame readiness; keep the >=16-color threshold.
+- Delayed-frame regression RED `40738136256` -> source/profile GREEN
+  `40738609224` at `1121af5`. Retry fresh PNGs with a 30-second soft budget
+  and bounded in-flight operations; reject permanent blank and retain the
+  final exact panel/liveness check. Independent review has no P1/P2; the soft
+  rather than strict wall-clock deadline is an explicit P3 limitation.
+  Real acceptance `40738943260` passes: original Niri/Pond sidebar and a
+  1280x800/7999-color PNG after two requests, final panel/process still alive.
+  Initialization changed=true/false and UID1000 home pass. Launcher diagnostic
+  exit255 identifies missing WAYLAND_DISPLAY in its separate cleared command
+  environment; that next gate and actual platform/owner gates remain open.

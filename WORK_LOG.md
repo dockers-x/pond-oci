@@ -51,9 +51,24 @@
   (first blank, then nonuniform), without relaxing the dimensions/color gate.
 - RED `40738136256` fails that exact new regression at 1280x800/one color.
   Separate frame readiness from layer mapping: retry newly requested safe PNGs
-  for at most 30 seconds, remove the previous fixture screenshot before each
+  with a 30-second retry budget, remove the previous fixture screenshot before each
   request, retain attempt metrics, and still reject permanently uniform frames.
   Keep process liveness and the final exact panel check; no threshold lowering.
+- Source/profile GREEN `40738609224` at `1121af5`; 32 source cases include
+  delayed-frame recovery and permanent-uniform rejection. Independent review
+  finds no P1/P2. P3 clarification: the retry budget is soft because bounded
+  in-flight IPC/PNG/identify operations can finish beyond it; it is not a
+  strict 30-second wall-clock deadline. Real run `40738943260` dispatched once.
+- Real GREEN `40738943260` at `1121af5`: actual hook changed=true/false,
+  UID1000 home, original Niri config, exact native Pond sidebar and a
+  1280x800/7999-color frame pass. Two frame requests demonstrate the initial
+  mapping/render timing distinction. The final panel/process check also passes.
+- Optional launcher diagnostic is still unaccepted: exit255 says the current
+  display is "unk", while the real Quickshell instance is on wayland-1. Its
+  separate cleared environment omitted WAYLAND_DISPLAY. Next bind that value
+  to a verified socket owned by the same Niri peer; do not guess a socket name.
+  This is real-payload fixture evidence, not actual LightOS systemd/proxy or
+  persistent remoted-owner acceptance. Image build remains suspended.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 
