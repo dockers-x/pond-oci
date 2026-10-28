@@ -120,6 +120,16 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   zero creates an invalid numeric SemVer prerelease identifier. Added a process
   regression for revision `012345678901` before changing version generation;
   source Actions must observe its failure and the correction remotely.
+- Source run `40675303365` observed exactly that one failure out of 20 tests:
+  `0.1.0-dev.012345678901` is invalid. Prefix every development commit identifier
+  with `g`, preserving the original revision separately. Formal versions/tags
+  do not change; a new Actions run must confirm the corrected behavior.
+- ABI audit `40673977531` succeeded. The locked Pond rootfs contains Niri
+  `26.04-1`, FFmpeg `2:9.0.2-2` providing libavcodec 63/libavutil 61/libswscale 10,
+  Aquamarine 0.15.1, hyprutils SONAME 13 and libdisplay-info SONAME 3. These
+  advertised ABIs match the currently published helper's requirements, not a
+  guarantee that every future package or actual encoder works. Actual AUR heads
+  remain 0.1.20 while upstream GitHub has v0.1.21; do not call them synchronized.
 - Added a GitHub-only payload audit of the actual Niri desktop entry, session
   wrapper, user service, PAM and skel. It uses the accepted Rust fetch/inspect
   tools, does not execute rootfs programs and uploads no rootfs/image artifact.

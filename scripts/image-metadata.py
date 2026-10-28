@@ -35,7 +35,7 @@ def metadata(root, revision, release_tag, kit_override):
     return {
         "schema_version": 1,
         "base_version": version,
-        "version": version if release_tag else f"{version}-dev.{revision[:12]}",
+        "version": version if release_tag else f"{version}-dev.g{revision[:12]}",
         "release": bool(release_tag),
         "recipe_revision": revision,
         "kit_revision": kit_revision,

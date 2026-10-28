@@ -34,7 +34,7 @@ class ImageMetadataTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout), {
             "schema_version": 1,
             "base_version": "0.1.0",
-            "version": f"0.1.0-dev.{REVISION[:12]}",
+            "version": f"0.1.0-dev.g{REVISION[:12]}",
             "release": False,
             "recipe_revision": REVISION,
             "kit_revision": KIT_REVISION,
