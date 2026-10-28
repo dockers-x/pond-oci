@@ -24,6 +24,12 @@
   Desktop then panics with XOpenDisplayFailed before shell startup. Xvfb only
   reports nonfatal xkb warnings. Add user-context socket/ancestor metadata and
   runner-only connect tracing to locate this fixture boundary before fixing it.
+- Diagnostic RED `40734247676` fails before desktop launch with a direct
+  UID1000 stat EACCES: /tmp is 1777 but /tmp/.X11-unix is root-owned 0700.
+  Give only the disposable mount namespace a fresh 0755 tmpfs parent before
+  binding the single Xvfb socket. Do not chmod the rootfs or expose all host
+  X11 sockets. Add a source regression for mount order and user preflight;
+  the actual namespace run remains the permission/desktop acceptance gate.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 

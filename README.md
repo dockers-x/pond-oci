@@ -22,6 +22,20 @@ gh workflow run audit-desktop.yml --repo dockers-x/pond-oci --ref main
 gh run list --repo dockers-x/pond-oci --workflow audit-desktop.yml
 ```
 
+锁定 payload 的隔离运行验收使用独立手动工作流：
+
+```sh
+gh workflow run probe-desktop.yml --repo dockers-x/pond-oci --ref main
+gh run list --repo dockers-x/pond-oci --workflow probe-desktop.yml
+```
+
+它在 GitHub 内创建 synthetic 账号并运行真实 Rust 初始化两次，再启动原生
+Niri/Pond 配置；不消费宿主 seed/auth，不把初始化后的目录用于镜像构建。
+已有运行仍在执行时应继续观察同一 run，不重复 dispatch。
+失败诊断自动输出到日志；历史报告也可通过 `inspect-probe.yml` 的 `run_id`
+输入在 GitHub 端读取，不把 rootfs 或报告下载到用户机器。
+初始化、完整桌面和实际 LightOS 启动是三个不同验收层级。
+
 工作流在 runner 中 checkout toolkit、编译 `rootfs-fetch`，再运行
 `scripts/fetch-rootfs.sh`。脚本默认：
 

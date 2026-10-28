@@ -209,6 +209,7 @@ class Probe:
     def graphical_session(self, display):
         parent_socket = f"/tmp/.X11-unix/X{display}"
         extra = [
+            "--perms", "0755", "--tmpfs", "/tmp/.X11-unix",
             "--ro-bind", parent_socket, parent_socket,
             "--setenv", "DISPLAY", f":{display}",
             "--setenv", "LIBGL_ALWAYS_SOFTWARE", "1",

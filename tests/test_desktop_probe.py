@@ -13,6 +13,19 @@ SPEC.loader.exec_module(PROBE)
 
 
 class DesktopProbeTests(unittest.TestCase):
+    def test_x11_parent_is_private_and_traversable_before_binding_one_socket(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = PROBE.Probe(Path(directory) / "root", Path(directory) / "report")
+            probe.run = mock.Mock(side_effect=RuntimeError("preflight reached"))
+            with self.assertRaisesRegex(RuntimeError, "preflight reached"):
+                probe.graphical_session("99")
+            options = probe.run.call_args.kwargs["extra"]
+            self.assertEqual(options[:7], [
+                "--perms", "0755", "--tmpfs", "/tmp/.X11-unix",
+                "--ro-bind", "/tmp/.X11-unix/X99", "/tmp/.X11-unix/X99",
+            ])
+            self.assertTrue(probe.run.call_args.kwargs["user"])
+
     def test_initialize_uses_niri_validate_subcommand_before_its_config_option(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "root"

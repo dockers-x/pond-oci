@@ -54,3 +54,15 @@ is the locked distribution payload, not more mock coverage or remoted research.
 - The current instance has no /lzcinit/lightosctl mount. Sudo is not external
   app authorization; do not invent a control API or inspect credentials to
   bypass this. Continue runner-side construction and acceptance meanwhile.
+- `40729655376` at `9a29245`: initial real probe reached Niri validation but
+  used the wrong CLI argument order. Regression RED `40731682925` then
+  source/profile GREEN `40732235594` establish the fix at `fa19516`.
+- `40732626280` at `fa19516`: actual keyring hook changed=true then false,
+  UID1000 home and the unchanged Niri configuration pass. Desktop startup
+  instead fails at XOpenDisplayFailed; no shell or graphical success claimed.
+- `40733935870` at `ba8bc68`: source/profile validation passes with added
+  socket metadata and runner-only connect tracing. Real diagnostic run
+  `40734247676` is dispatched once; observe it before changing fixture policy.
+- `40734247676`: UID1000 cannot stat the socket because its root-owned parent
+  is mode 0700. Mask only that parent with a private 0755 tmpfs before binding
+  the one runner Xvfb socket; leave rootfs and host directory modes untouched.
