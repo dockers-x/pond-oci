@@ -32,6 +32,43 @@ The user requests `ub-mode` and a commit/push after each verified phase.
 Source publishing is not proof of OCI construction, redistribution rights or
 successful LightOS account/keyring/Niri/VT/PAM/logind startup.
 
+## 2026-10-28 — CLI gate and GitHub-only image execution
+
+- The toolkit completion gate passed before starting image work: all three
+  GitHub jobs succeeded at `cbf327f` in run `40662397249`, including minimum Rust,
+  static binaries and isolated initializer runtime acceptance. An independent
+  whole-change review found no remaining issue. The documentation head
+  `daaf572` also passed run `40663154259`.
+- Dispatched the first image workflow as run `40663605078`, recipe source
+  `8d258334d047925e8e2d871df77293e3108eba9e`, exact kit source
+  `cbf327f0fa20b4e87b491b14aeed373f20cf223b`. At this entry's writing, toolkit
+  compilation and the verified rootfs download succeeded on GitHub; OCI
+  construction is still running. No image/boot success is inferred.
+- The user's new execution constraint places every subsequent rootfs/dependency
+  download, build and runtime check in GitHub Actions. Local work is source
+  editing/static review, SSH pushes and workflow/log inspection only. Updated
+  README entry points accordingly; the generic toolkit remains platform-neutral.
+- Existing workflows do not upload the rootfs or OCI archive or push a registry.
+  An independent read-only recipe review is in progress. Real LightOS and Niri
+  startup acceptance remain separate from the current OCI construction attempt.
+
+## 2026-10-28 — Remote regression and release preparation
+
+- First build run `40663605078` completed successfully in 11m27s on GitHub.
+  This proves OCI construction only; it did not validate the final layer or boot.
+- Independent static review confirmed two P2s: the workflow refreshes the rootfs
+  lock before building, and the mask loop can hide an early failure or omit a
+  final non-newline-terminated unit. Added three targeted regression tests of
+  the production command/configuration; remote CI must demonstrate the failures
+  before production is corrected. No local executable tests or builds are run.
+- User adds independent SemVer releases, Docker Hub plus GHCR publication and
+  amd64-only output. Existing registry secrets are already configured. Read the
+  referenced rustdesk workflow's variable/secret names, without reading values.
+  `docs/image-acceptance.md` and the image-release plan pin the revised contract.
+- The explicit registry-publication request supersedes the earlier no-image-
+  upload policy. It does not establish a successful LightOS/Niri boot or an
+  upstream version number; those claims remain excluded.
+
 ## 2026-10-28 — Source publication over SSH
 
 - HTTPS attempts timed out; the final response also reported that the OAuth token

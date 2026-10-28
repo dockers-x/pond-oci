@@ -12,15 +12,18 @@ Pond rootfs → OCI 的薄配方，使用 `ca-x/oci-kit`，不修改上游 ISO i
 
 ## 最新版本与可重复下载
 
-先在相邻 `../oci-kit` checkout 构建工具，或把 `ROOTFS_FETCH` 指向已有的二进制：
+**所有下载、依赖安装、Rust 编译、OCI 打包及运行验收均在 GitHub Actions 完成。**
+本地只编辑、审阅和通过 SSH 推送源码，以及查看工作流状态；不在本机下载 rootfs 或构建产物。
+使用已经完成 CLI 验收的精确 toolkit commit 触发远程构建：
 
 ```sh
-cargo build --locked --release --manifest-path ../oci-kit/Cargo.toml --workspace --bins
-export ROOTFS_FETCH="$PWD/../oci-kit/target/release/rootfs-fetch"
-bash scripts/fetch-rootfs.sh
+gh workflow run build.yml --repo dockers-x/pond-oci --ref main \
+  -f kit_revision=daaf5723d13ab93999c7c325752ff5ef77c81733
+gh run list --repo dockers-x/pond-oci --workflow build.yml
 ```
 
-脚本默认：
+工作流在 runner 中 checkout toolkit、编译 `rootfs-fetch`，再运行
+`scripts/fetch-rootfs.sh`。脚本默认：
 
 1. 读取 `bflycomputer/iso-installer` 的默认分支及当前 commit。
 2. **按固定 commit**读取 `src/backend/model.py`，只解析白名单 AST 声明；不 import/exec 上游代码。
@@ -31,7 +34,7 @@ bash scripts/fetch-rootfs.sh
 installer 更新不代表 rootfs 必然更新；同一摘要不反复改写锁文件。
 GitHub API 可通过 `GH_TOKEN` / `GITHUB_TOKEN` 认证；token 不进入 URL、锁文件或镜像。
 
-可重复使用已锁定版本，不查询最新声明：
+以下内部命令只在 Actions runner 中执行；需要重用已锁定版本时，不查询最新声明：
 
 ```sh
 bash scripts/fetch-rootfs.sh --locked
@@ -41,6 +44,8 @@ python3 scripts/resolve-rootfs.py --check
 `--check` 在发现新 rootfs 时退出 1，不写锁文件。下载不需要 ISO 安装器的分区、Btrfs、GRUB 或 EFI 逻辑。
 
 ## 先审计，再清理
+
+归档检查同样在 Actions runner 中运行，不将归档下载回本机：
 
 ```sh
 digest="$(python3 -c 'import json; print(json.load(open("rootfs.lock.json"))["sha256"])')"
@@ -61,8 +66,9 @@ digest="$(python3 -c 'import json; print(json.load(open("rootfs.lock.json"))["sh
 
 ## 镜像构建
 
-要求 Docker + Buildx，以及相邻的 `oci-kit` 源码。脚本不安装/启动宿主 daemon，
-默认只输出本地 OCI archive，不 push：
+Actions runner 提供 Docker + Buildx，以及相邻的 `oci-kit` 源码。
+工作流通过以下内部入口构建；脚本不安装/启动本机 daemon，
+默认只输出 runner 内的 OCI archive，不 push，也不上传 rootfs/image artifact：
 
 ```sh
 KIT_SOURCE=../oci-kit bash scripts/build.sh
