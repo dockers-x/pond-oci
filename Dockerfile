@@ -20,9 +20,9 @@ RUN --mount=type=bind,from=rootfs,source=/pond-rootfs.tar.zst,target=/input/root
     rootfs-cleaner mark --root /rootfs && \
     rootfs-cleaner clean --root /rootfs --policy /work/profiles/cleanup.toml --apply && \
     lighos-init install --root /rootfs --config /work/profiles/lightos.toml && \
-    while IFS= read -r unit; do \
+    while IFS= read -r unit || [ -n "$unit" ]; do \
       case "$unit" in ''|*[!A-Za-z0-9@_.-]*|..*) exit 2 ;; esac; \
-      ln -sfnT /dev/null "/rootfs/etc/systemd/system/$unit"; \
+      ln -sfnT /dev/null "/rootfs/etc/systemd/system/$unit" || exit 1; \
     done < /work/profiles/masked-units.txt && \
     ln -sfnT /usr/lib/systemd/system/multi-user.target /rootfs/etc/systemd/system/default.target && \
     rm /rootfs/.oci-kit-staging && \

@@ -68,6 +68,11 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
 - The explicit registry-publication request supersedes the earlier no-image-
   upload policy. It does not establish a successful LightOS/Niri boot or an
   upstream version number; those claims remain excluded.
+- GitHub source run `40666844536` at `5558750` reproduced exactly three intended
+  failures out of 13 tests: unlocked fetch invocation, early mask failure
+  incorrectly returning zero, and an unprocessed final unit without newline.
+  Corrected the workflow to `--locked`, retained the final line and explicitly
+  propagated every failed mask. The green follow-up must also run on GitHub.
 
 ## 2026-10-28 — Source publication over SSH
 

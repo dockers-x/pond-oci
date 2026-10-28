@@ -32,7 +32,7 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           ROOTFS_FETCH: ${{ github.workspace }}/oci-kit/target/release/rootfs-fetch
-        run: bash pond-oci/scripts/fetch-rootfs.sh
+        run: bash pond-oci/scripts/fetch-rootfs.sh --locked
       - env:
           ROOTFS_FETCH: ${{ github.workspace }}/oci-kit/target/release/rootfs-fetch
           KIT_SOURCE: ${{ github.workspace }}/oci-kit
