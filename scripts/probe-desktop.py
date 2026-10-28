@@ -71,8 +71,8 @@ def pond_layers(layers):
         raise ValueError("Niri layer response must be a list")
     return [layer for layer in layers if isinstance(layer, dict)
             and isinstance(layer.get("namespace"), str)
-            and layer["namespace"] == "quickshell"
-            and layer.get("layer") in ("Top", "Bottom", "Overlay")]
+            and layer["namespace"] == "pond-sidebar"
+            and layer.get("layer") == "Top"]
 
 
 def request(path, message):
@@ -209,7 +209,7 @@ class Probe:
     def graphical_session(self, display):
         parent_socket = f"/tmp/.X11-unix/X{display}"
         extra = [
-            "--perms", "0755", "--tmpfs", "/tmp/.X11-unix",
+            "--perms", "1777", "--tmpfs", "/tmp/.X11-unix",
             "--ro-bind", parent_socket, parent_socket,
             "--setenv", "DISPLAY", f":{display}",
             "--setenv", "LIBGL_ALWAYS_SOFTWARE", "1",

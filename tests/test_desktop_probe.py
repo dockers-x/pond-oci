@@ -21,7 +21,7 @@ class DesktopProbeTests(unittest.TestCase):
                 probe.graphical_session("99")
             options = probe.run.call_args.kwargs["extra"]
             self.assertEqual(options[:7], [
-                "--perms", "0755", "--tmpfs", "/tmp/.X11-unix",
+                "--perms", "1777", "--tmpfs", "/tmp/.X11-unix",
                 "--ro-bind", "/tmp/.X11-unix/X99", "/tmp/.X11-unix/X99",
             ])
             self.assertTrue(probe.run.call_args.kwargs["user"])
@@ -74,8 +74,14 @@ class DesktopProbeTests(unittest.TestCase):
             {"namespace": "another-panel", "layer": "Top"},
             {"namespace": "pond-lookalike", "layer": "Top"},
             {"namespace": "quickshell-unrelated", "layer": "Top"},
+            {"namespace": "quickshell", "layer": "Top"},
+            {"namespace": "pond-wallpaper", "layer": "Background"},
+            {"namespace": "pond-settings-winit", "layer": "Overlay"},
+            {"namespace": "pond-sidebar-unrelated", "layer": "Top"},
+            {"namespace": "pond-sidebar", "layer": "Background"},
+            {"namespace": "pond-sidebar", "layer": "Overlay"},
         ]), [])
-        for name in ("quickshell",):
+        for name in ("pond-sidebar",):
             layer = {"namespace": name, "layer": "Top"}
             self.assertEqual(PROBE.pond_layers([layer]), [layer])
 
@@ -164,7 +170,7 @@ class DesktopProbeTests(unittest.TestCase):
                 nonlocal queries
                 if message == "Layers":
                     queries += 1
-                    return {"Layers": [{"namespace": "quickshell", "layer": "Top"}] if queries == 1 else []}
+                    return {"Layers": [{"namespace": "pond-sidebar", "layer": "Top"}] if queries == 1 else []}
                 if message == "Outputs":
                     return {"Outputs": {"winit": {}}}
                 return "Handled"
@@ -184,7 +190,7 @@ class DesktopProbeTests(unittest.TestCase):
 
             def respond(_endpoint, message):
                 if message == "Layers":
-                    return {"Layers": [{"namespace": "quickshell", "layer": "Top"}]}
+                    return {"Layers": [{"namespace": "pond-sidebar", "layer": "Top"}]}
                 if message == "Outputs":
                     return {"Outputs": {"winit": {}}}
                 return "Handled"

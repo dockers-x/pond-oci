@@ -30,6 +30,16 @@
   binding the single Xvfb socket. Do not chmod the rootfs or expose all host
   X11 sockets. Add a source regression for mount order and user preflight;
   the actual namespace run remains the permission/desktop acceptance gate.
+- `40735573507` at `d707843` passes the X11 boundary and starts actual
+  Niri 26.04 plus `qs -c pond-shell`. Verified Niri IPC reports pond-wallpaper
+  Background, pond-sidebar Top and pond-settings-winit Overlay. The probe's
+  previous unverified exact `quickshell` namespace expectation rejects these.
+  Admit only observed pond-sidebar/Top, not any pond/quickshell prefix or
+  wallpaper/settings layer. Require the same panel again after screenshot.
+- The same log warns that a 0755 X11 parent prevents xwayland-satellite from
+  creating its own sockets. Use the standard 1777 mode on this private tmpfs
+  only, retaining the single parent-socket bind and leaving host/rootfs modes
+  unchanged. No screenshot, launcher, systemd or LightOS success yet claimed.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 

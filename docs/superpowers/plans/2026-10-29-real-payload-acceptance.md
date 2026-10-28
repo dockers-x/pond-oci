@@ -66,3 +66,8 @@ is the locked distribution payload, not more mock coverage or remoted research.
 - `40734247676`: UID1000 cannot stat the socket because its root-owned parent
   is mode 0700. Mask only that parent with a private 0755 tmpfs before binding
   the one runner Xvfb socket; leave rootfs and host directory modes untouched.
+- `40735573507`: Niri and Pond Quickshell start and publish the actual
+  `pond-sidebar` Top layer, wallpaper and first-run settings overlay. Replace
+  the previously unverified `quickshell` namespace expectation with this exact
+  panel/layer pair, not a name prefix. Give the private X11 tmpfs standard 1777
+  permissions so xwayland-satellite can create its own sockets as UID1000.
