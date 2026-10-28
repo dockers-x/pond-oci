@@ -73,3 +73,8 @@ OCI archive and registry copy tooling available only on the runner.
   lightos-remote-desktop/AUR when needed. Investigating explicit package staging
   first: ordinary AUR hooks generate auth and activate a Cage/Hyprland owner,
   which cannot run in an image build or substitute for Pond/Niri.
+- Recipe wiring `9b0d20e` selects reviewed toolkit `e682f78` and lists both
+  canonical remote services. GitHub run `40713790188` passes source and the
+  actual-toolkit/profile acceptance after observed RED `40710876277`; fresh
+  review found no P1/P2. Task 3 remains open: offline ordering is not device,
+  full Pond shell, persistent Niri owner or platform runtime acceptance.

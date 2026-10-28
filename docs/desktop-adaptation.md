@@ -63,10 +63,12 @@ remote settings may still be missing or disabled.
 
 ## Remaining gates
 
-1. Accept the recipe's actual Rust profile installation after observing the
-   missing-ordering regression. Cover repeated installation with platform
-   settings both present and absent; preserve disabled services and package
-   units, and create neither credentials nor runtime completion markers.
+1. Recipe wiring passed GitHub run `40713790188` at `9b0d20e` after the
+   missing-ordering RED in `40710876277`: both settings scenarios install
+   twice, preserving package units and leaving remote services unenabled.
+   Independent review found no P1/P2. Existing masks and syscall-level
+   no-auth-read coverage are deferred improvements; this is offline evidence,
+   not a boot or late-settings runtime acceptance.
 2. Verify Pond shell/launcher startup and useful failure diagnostics. No real
    seed or platform authentication is needed or permitted in those fixtures.
 3. A persistent native Niri owner remains required: preserve per-user includes

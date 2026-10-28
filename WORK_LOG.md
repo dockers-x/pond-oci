@@ -26,7 +26,17 @@
 - Reconcile desktop-gate documentation with completed offline AUR and isolated
   Niri capture/input/text-clipboard evidence. Persistent native owner and full
   Pond shell/platform/device acceptance remain open; no Dockerfile change or
-  image-workflow dispatch is part of this phase. GREEN awaits the next run.
+  image-workflow dispatch is part of this phase.
+- GREEN: revision `9b0d20ebc69c7451885bb12ec5f5d7b5d484c004` passed both
+  `source` and `toolkit-profile` in GitHub run `40713790188`. The latter builds
+  the locked Rust commands and executes both settings scenarios, twice each.
+- Final review: a fresh read-only reviewer found no P1/P2 in the full wiring
+  change. Deferred minors: syscall-level proof against auth reads and an
+  existing `/dev/null` service-mask fixture; static review found no auth read.
+  These are coverage improvements, not proven current leaks or mask changes.
+- Next: specify and verify explicit numeric render-node group authorization
+  in the Rust adapter. Do not change host nodes, guess usernames, or resume
+  persistent-remoted-owner research to implement this independent prerequisite.
 
 ## 2026-10-28 — Preserve the native Pond shell, not just its compositor
 
