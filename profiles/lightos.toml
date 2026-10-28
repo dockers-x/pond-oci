@@ -1,2 +1,6 @@
 schema_version = 1
 pacman_keyrings = ["pond"]
+post_setup_services = [
+  "lightos-remote-desktop.service",
+  "lightos-remote-desktop-session.service",
+]

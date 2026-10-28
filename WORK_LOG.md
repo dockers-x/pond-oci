@@ -14,6 +14,19 @@
 - Strengthen the source profile contract before changing the profile or toolkit
   lock. RED must be observed remotely; no image/rootfs download, local toolkit
   build, host service operation or successful desktop boot is implied.
+- Observed RED on GitHub run `40710876277`, exact regression revision
+  `a26b46e4f9b9f9fc234b53d47786ab336ec6702e`: source job `122895484907`
+  rejects the old profile and real-toolkit job `122895485516` reports
+  `missing ordering for lightos-remote-desktop.service`. Toolkit compilation
+  itself succeeded; the failure is the intended missing recipe wiring.
+- Select already accepted toolkit `e682f7869062bdcc1024e5ef589a99143baaed59`
+  and list exactly the two canonical services in the Pond profile. Add the
+  absent-settings fixture alongside the opaque existing-settings fixture;
+  both run installation twice with no usable external-command PATH.
+- Reconcile desktop-gate documentation with completed offline AUR and isolated
+  Niri capture/input/text-clipboard evidence. Persistent native owner and full
+  Pond shell/platform/device acceptance remain open; no Dockerfile change or
+  image-workflow dispatch is part of this phase. GREEN awaits the next run.
 
 ## 2026-10-28 — Preserve the native Pond shell, not just its compositor
 

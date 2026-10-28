@@ -44,18 +44,36 @@ credentials in a second initializer, invent admin APIs, or bake auth into the
 image. `/var/lib/lightos/initialized` is only the first-boot boundary: later
 remote settings may still be missing or disabled.
 
-## Remaining gates, in order
+## Verified prerequisites
 
-1. Finish the remoted offline-staging release through exact-tag CI, Arch codec
-   publication and both real AUR packages. Keep normal live installation intact.
-2. Exercise an isolated Niri candidate in GitHub before choosing an owner
-   adapter: native first frame, pointer/keyboard and clipboard, correct output,
-   Pond shell/launcher startup and useful failure diagnostics. No real seed or
-   platform authentication is needed or permitted in those fixtures.
-3. Extend the Rust session owner without guessing Hyprland signatures or
-   capturing Cage instead of Niri. Preserve per-user Niri includes and the
-   compositor's application environment. Prove reconnect/transport upgrade
-   does not kill the persistent desktop or its applications.
+- Remoted v0.1.22 offline staging passed exact-tag CI `40685354147`, Arch
+  codec publication `40687539494` and AUR publication `40687977677`. The
+  subsequent main-package revision 0.1.22-2 adds the ABI-matched Hyprland
+  cursor companion; AUR run `40708466590` and source CI `40708400112` passed.
+  Its live-host repair did not restart the persistent session. This does not
+  make that Hyprland-specific companion a Niri owner.
+- Isolated Niri capture `40689971420`, actual pointer/keyboard delivery
+  `40697001655` and bidirectional Unicode text clipboard `40699256007` passed
+  on GitHub. These prove those individual seams, not the full Pond desktop.
+- Toolkit revision `e682f7869062bdcc1024e5ef589a99143baaed59` passed source,
+  minimum-Rust and static/runtime CI `40684692564`. Its ordering extension
+  is now selected by this recipe and exercised against the actual Pond profile
+  in the separate `toolkit-profile` validation job. That job does not build an
+  image or start a service.
+
+## Remaining gates
+
+1. Accept the recipe's actual Rust profile installation after observing the
+   missing-ordering regression. Cover repeated installation with platform
+   settings both present and absent; preserve disabled services and package
+   units, and create neither credentials nor runtime completion markers.
+2. Verify Pond shell/launcher startup and useful failure diagnostics. No real
+   seed or platform authentication is needed or permitted in those fixtures.
+3. A persistent native Niri owner remains required: preserve per-user includes
+   and the compositor's application environment, and prove reconnect/transport
+   upgrade leaves the desktop and its applications alive. The user deferred
+   further remoted-owner work; do not substitute its current Hyprland owner or
+   treat an empty Niri instance as completion.
 4. Finish explicit device policy without changing host device permissions.
    Bind-mounted GPU groups are numeric identities, not necessarily the named
    video/render groups in the rootfs. Apply authorization to the actual owner

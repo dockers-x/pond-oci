@@ -14,6 +14,11 @@ SERVICES = (
 @unittest.skipUnless(os.environ.get("LIGHTOS_INIT_BINARY"), "requires the GitHub-built Rust toolkit")
 class LightOSProfileTests(unittest.TestCase):
     def test_the_actual_pond_profile_orders_both_services_without_activating_them(self):
+        for settings_present in (False, True):
+            with self.subTest(settings_present=settings_present):
+                self.assert_offline_install_preserves_platform_ownership(settings_present)
+
+    def assert_offline_install_preserves_platform_ownership(self, settings_present):
         initializer = os.environ["LIGHTOS_INIT_BINARY"]
         cleaner = os.environ["ROOTFS_CLEANER_BINARY"]
         with tempfile.TemporaryDirectory() as directory:
@@ -22,9 +27,10 @@ class LightOSProfileTests(unittest.TestCase):
             vendor_units = root / "usr/lib/systemd/system"
             vendor_units.mkdir(parents=True)
             environment = root / "etc/lightos/remote-desktop.env"
-            environment.parent.mkdir(parents=True)
-            environment.write_text("opaque platform-owned fixture\n")
-            environment.chmod(0o600)
+            if settings_present:
+                environment.parent.mkdir(parents=True)
+                environment.write_text("opaque platform-owned fixture\n")
+                environment.chmod(0o600)
             for service in SERVICES:
                 (vendor_units / service).write_text("opaque package-owned fixture\n")
             commands = [
@@ -48,7 +54,10 @@ class LightOSProfileTests(unittest.TestCase):
             unit = (root / "etc/systemd/system/lighos-init.service").read_text()
             self.assertIn("AssertPathExists=/var/lib/lightos/initialized", unit)
             self.assertNotIn("ConditionPathExists=/var/lib/lightos/initialized", unit)
-            self.assertEqual(environment.read_text(), "opaque platform-owned fixture\n")
-            self.assertEqual(environment.stat().st_mode & 0o777, 0o600)
+            if settings_present:
+                self.assertEqual(environment.read_text(), "opaque platform-owned fixture\n")
+                self.assertEqual(environment.stat().st_mode & 0o777, 0o600)
+            else:
+                self.assertFalse(environment.exists() or environment.is_symlink())
             self.assertFalse((root / "var/lib/oci-kit").exists())
             self.assertFalse((root / "var/lib/lightos/initialized").exists())
