@@ -162,7 +162,12 @@ class DesktopProbeTests(unittest.TestCase):
     def test_optional_launcher_diagnostic_timeout_preserves_verified_frame_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             probe = self.graphical_fixture(Path(directory))
-            probe.run.side_effect = subprocess.TimeoutExpired(["qs", "ipc", "show"], 15, output=b"partial diagnostic")
+            def run(arguments, **_keywords):
+                if "/usr/bin/qs" in arguments:
+                    raise subprocess.TimeoutExpired(["qs", "ipc", "show"], 15, output=b"partial diagnostic")
+                return subprocess.CompletedProcess(arguments, 0, "", "")
+
+            probe.run.side_effect = run
 
             def respond(_endpoint, message):
                 if message == "Layers":
