@@ -223,3 +223,15 @@ class DesktopProbeTests(unittest.TestCase):
                 evidence = probe.graphical_session("99")
             self.assertEqual(evidence["frame"]["colors"], 2048)
             self.assertEqual(len(captures), 2)
+
+    def test_permanently_uniform_frame_is_rejected_at_the_deadline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.graphical_fixture(Path(directory))
+            process = mock.Mock()
+            process.poll.return_value = None
+            with mock.patch.object(PROBE.time, "monotonic", side_effect=[0, 0, 31]), \
+                    mock.patch.object(PROBE, "request", return_value="Handled"), \
+                    mock.patch.object(PROBE.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "1280 800 1", "")):
+                with self.assertRaisesRegex(RuntimeError, "stayed too small or uniform"):
+                    probe.capture_frame(probe.root / "niri.sock", process)
+            self.assertIn('"colors": 1', (probe.report / "frame.json").read_text())

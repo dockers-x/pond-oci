@@ -49,6 +49,11 @@
   and measures the saved PNG: 1280x800, exactly one color. A mapped layer is
   not yet a rendered frame. Add a regression requiring bounded frame readiness
   (first blank, then nonuniform), without relaxing the dimensions/color gate.
+- RED `40738136256` fails that exact new regression at 1280x800/one color.
+  Separate frame readiness from layer mapping: retry newly requested safe PNGs
+  for at most 30 seconds, remove the previous fixture screenshot before each
+  request, retain attempt metrics, and still reject permanently uniform frames.
+  Keep process liveness and the final exact panel check; no threshold lowering.
 
 ## 2026-10-29 — Real payload initialization and native shell experiment
 

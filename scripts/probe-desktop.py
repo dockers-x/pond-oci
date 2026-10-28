@@ -206,6 +206,39 @@ class Probe:
                 os.close(read_descriptor)
                 stop(display)
 
+    def capture_frame(self, endpoint, process):
+        deadline = time.monotonic() + 30
+        screenshot = f"/home/{USER}/pond-proof.png"
+        image = self.root / screenshot.lstrip("/")
+        copied_image = self.report / "pond-desktop.png"
+        attempts = 0
+        while True:
+            if process.poll() is not None:
+                raise RuntimeError("native Niri exited while waiting for a rendered frame")
+            image.unlink(missing_ok=True)
+            reply = request(endpoint, {"Action": {"ScreenshotScreen": {"write_to_disk": True, "show_pointer": False, "path": screenshot}}})
+            if reply != "Handled":
+                raise RuntimeError(f"screenshot request was not handled: {reply!r}")
+            until = min(deadline, time.monotonic() + 10)
+            while True:
+                try:
+                    copy_screenshot(image, copied_image)
+                    break
+                except (OSError, ValueError):
+                    if time.monotonic() >= until:
+                        raise RuntimeError("Niri did not publish a complete safe screenshot") from None
+                    time.sleep(0.1)
+            result = subprocess.run([shutil.which("identify"), "-limit", "memory", "128MiB", "-limit", "map", "256MiB", "-format", "%w %h %k", str(copied_image)], capture_output=True, text=True, timeout=10, check=True, env=self.environment)
+            width, height, colors = map(int, result.stdout.split())
+            attempts += 1
+            frame = {"width": width, "height": height, "colors": colors, "attempts": attempts}
+            (self.report / "frame.json").write_text(json.dumps(frame) + "\n")
+            if min(width, height) >= 100 and colors >= 16:
+                return frame
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"desktop screenshot stayed too small or uniform: {width}x{height}, {colors} colors after {attempts} attempts")
+            time.sleep(0.5)
+
     def graphical_session(self, display):
         parent_socket = f"/tmp/.X11-unix/X{display}"
         extra = [
@@ -241,26 +274,7 @@ class Probe:
                 outputs = request(endpoint, "Outputs").get("Outputs", {})
                 if not outputs:
                     raise RuntimeError("native Niri has no output")
-                screenshot = f"/home/{USER}/pond-proof.png"
-                reply = request(endpoint, {"Action": {"ScreenshotScreen": {"write_to_disk": True, "show_pointer": False, "path": screenshot}}})
-                if reply != "Handled":
-                    raise RuntimeError(f"screenshot request was not handled: {reply!r}")
-                image = self.root / screenshot.lstrip("/")
-                copied_image = self.report / "pond-desktop.png"
-                until = time.monotonic() + 10
-                while True:
-                    try:
-                        copy_screenshot(image, copied_image)
-                        break
-                    except (OSError, ValueError):
-                        if time.monotonic() >= until:
-                            raise RuntimeError("Niri did not publish a complete safe screenshot") from None
-                        time.sleep(0.1)
-                result = subprocess.run([shutil.which("identify"), "-limit", "memory", "128MiB", "-limit", "map", "256MiB", "-format", "%w %h %k", str(copied_image)], capture_output=True, text=True, timeout=10, check=True, env=self.environment)
-                width, height, colors = map(int, result.stdout.split())
-                (self.report / "frame.json").write_text(json.dumps({"width": width, "height": height, "colors": colors}) + "\n")
-                if min(width, height) < 100 or colors < 16:
-                    raise RuntimeError(f"desktop screenshot is too small or uniform: {width}x{height}, {colors} colors")
+                frame = self.capture_frame(endpoint, process)
                 native = "/" + endpoint.relative_to(self.root).as_posix()
                 diagnostic = {"exit_code": None, "timed_out": False}
                 try:
@@ -278,7 +292,7 @@ class Probe:
                 layers = request(endpoint, "Layers").get("Layers", [])
                 if not pond_layers(layers):
                     raise RuntimeError("Pond shell panel disappeared after its first frame")
-                return {"layers": layers, "outputs": outputs, "frame": {"width": width, "height": height, "colors": colors}, "launcher_ipc_diagnostic": diagnostic}
+                return {"layers": layers, "outputs": outputs, "frame": frame, "launcher_ipc_diagnostic": diagnostic}
             finally:
                 stop(process)
 
