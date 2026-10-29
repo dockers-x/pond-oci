@@ -2,6 +2,8 @@ import importlib.util
 from pathlib import Path
 import socket
 import struct
+import subprocess
+import sys
 import unittest
 
 
@@ -38,6 +40,40 @@ class RemoteFrameTests(unittest.TestCase):
         for header in (b"\x01\x00", b"\xc1\x00", b"\x81\x80"):
             with self.subTest(header=header), self.assertRaisesRegex(RuntimeError, "flags"):
                 self.frame(header)
+
+
+class ProcessStopTests(unittest.TestCase):
+    def test_already_exited_process_is_not_a_normal_stop(self):
+        for status in (0, 17):
+            with self.subTest(status=status):
+                process = subprocess.Popen([sys.executable, "-c", f"raise SystemExit({status})"])
+                process.wait(timeout=5)
+                with self.assertRaisesRegex(RuntimeError, "exited before"):
+                    probe.stop(process)
+
+    def test_nonzero_exit_after_term_is_not_a_normal_stop(self):
+        source = "import signal,sys; signal.signal(signal.SIGTERM, lambda *_: sys.exit(19)); print('ready', flush=True); signal.pause()"
+        with subprocess.Popen([sys.executable, "-c", source], stdout=subprocess.PIPE, text=True) as process:
+            try:
+                self.assertEqual(process.stdout.readline(), "ready\n")
+                with self.assertRaisesRegex(RuntimeError, "unsuccessful"):
+                    probe.stop(process)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+
+    def test_successful_term_after_live_readiness(self):
+        source = "import signal,sys; signal.signal(signal.SIGTERM, lambda *_: sys.exit(0)); print('ready', flush=True); signal.pause()"
+        with subprocess.Popen([sys.executable, "-c", source], stdout=subprocess.PIPE, text=True) as process:
+            try:
+                self.assertEqual(process.stdout.readline(), "ready\n")
+                probe.stop(process)
+                self.assertEqual(process.returncode, 0)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
 
 
 if __name__ == "__main__":
