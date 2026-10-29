@@ -453,3 +453,9 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   bind and print only the public rootfs link metadata. Do not replace the
   upstream link or bind the runner's complete `/etc` or `/run`. The package
   signature, repository and desktop gates have not executed yet.
+
+- Order the disposable rootfs/package preparation before frontend/remoted
+  compilation. Only the static kit is needed for that first boundary, so DNS,
+  repository or package failures now surface before the expensive desktop build.
+  Successful probes still compile the exact accepted remoted source and execute
+  the unchanged actual-desktop gate afterward.

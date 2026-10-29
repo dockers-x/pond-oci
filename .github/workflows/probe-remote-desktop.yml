@@ -66,16 +66,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24'
-      - name: Build reviewed remote desktop frontend only on GitHub
-        working-directory: remoted
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm ci
-          npm run build
-      - name: Build reviewed remote desktop binary only on GitHub
-        working-directory: remoted
-        run: cargo build --locked --release --features bundled-jpeg
       - name: Build reviewed static Rust commands only on GitHub
         run: cargo +stable build --locked --release --manifest-path oci-kit/Cargo.toml --workspace --bins --target x86_64-unknown-linux-musl
       - name: Download the verified locked rootfs only on GitHub
@@ -108,6 +98,16 @@ jobs:
             /usr/bin/pacman -Q | sudo tee "$RUNNER_TEMP/pond-remote-report/packages.txt" > /dev/null
           sudo "$tools/rootfs-cleaner" clean --root "$root" --policy pond-oci/profiles/cleanup.toml --apply
           sudo "$tools/lighos-init" install --root "$root" --config pond-oci/profiles/lightos.toml
+      - name: Build reviewed remote desktop frontend only on GitHub
+        working-directory: remoted
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+      - name: Build reviewed remote desktop binary only on GitHub
+        working-directory: remoted
+        run: cargo build --locked --release --features bundled-jpeg
       - name: Probe the prepared Pond payload through its native remote desktop
         run: |
           sudo env GITHUB_ACTIONS=true RUNNER_TEMP="$RUNNER_TEMP" \
