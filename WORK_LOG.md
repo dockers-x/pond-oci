@@ -29,6 +29,13 @@
   Implement hashing without copy/chmod in installed mode; normal staging still
   refuses replacement. Record the verified digest in final evidence. This alone
   is not final-image runtime acceptance; the workflow still needs to select it.
+- Wire final-layer runtime testing after the full content comparison and before
+  retaining the candidate. Mark only its disposable extraction, verify the
+  installed remoted against the original same-run build digest, then run real
+  Rust initialization twice and the native Pond/two-transport/frame gates.
+  Preserve the signed Arch fixture's Pillow only under /run for test decoding;
+  do not install test packages into the image or replace any image binary.
+  This remains a namespace/synthetic-platform test, not systemd/LightOS proxy.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 

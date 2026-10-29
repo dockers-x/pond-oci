@@ -185,6 +185,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          packages=("$RUNNER_TEMP/pond-runtime-fixture"/usr/lib/python*/site-packages/PIL)
+          [[ ${#packages[@]} == 1 && -d "${packages[0]}" && ! -L "${packages[0]}" ]]
+          sudo mkdir "$RUNNER_TEMP/pond-test-python"
+          sudo cp -a -- "${packages[0]}" "$RUNNER_TEMP/pond-test-python/PIL"
           sudo rm -rf -- "$RUNNER_TEMP/pond-runtime-fixture"
           sudo env GITHUB_ACTIONS=true GITHUB_SERVER_URL="$GITHUB_SERVER_URL" RUNNER_TEMP="$RUNNER_TEMP" \
             ROOTFS_SHA256="$ROOTFS_SHA256" \
@@ -264,6 +268,19 @@ jobs:
             printf '::error::Final OCI payload differs from the staged rootfs.\n'
             exit 1
           fi
+      - name: Probe initialization and native desktop from the actual final OCI payload
+        if: inputs.build_candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools="$GITHUB_WORKSPACE/oci-kit/target/x86_64-unknown-linux-musl/release"
+          sudo "$tools/rootfs-cleaner" mark --root "$RUNNER_TEMP/pond-final-root"
+          sudo env GITHUB_ACTIONS=true RUNNER_TEMP="$RUNNER_TEMP" \
+            python3 pond-oci/scripts/probe-remote-desktop.py \
+            --root "$RUNNER_TEMP/pond-final-root" \
+            --report "$RUNNER_TEMP/pond-final-report" \
+            --binary "$GITHUB_WORKSPACE/remoted/target/release/lightos-remoted" \
+            --installed --python-fixture "$RUNNER_TEMP/pond-test-python"
       - name: Preserve the unpublished desktop candidate only on GitHub
         if: inputs.build_candidate && success()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -292,6 +309,13 @@ jobs:
               sudo tail -c 24000 -- "$path"
             fi
           done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always() && inputs.build_candidate && steps.github.outputs.enabled == 'true'
+        with:
+          name: pond-final-desktop-report
+          path: ${{ runner.temp }}/pond-final-report
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always() && steps.github.outputs.enabled == 'true'
         with:

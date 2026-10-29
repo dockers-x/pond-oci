@@ -346,6 +346,15 @@ def outside(arguments):
     require(not missing, f"real rootfs is missing remote prerequisites inside its own namespace: {', '.join(missing)}")
     binary = payload.fixture_directory(arguments.root, "usr/lib/lightos-remoted") / "lightos-remoted"
     binary_evidence = stage_binary(arguments.binary, binary, installed=arguments.installed)
+    python_environment = []
+    if arguments.installed:
+        dependency = arguments.python_fixture
+        require(dependency is not None and not dependency.is_symlink() and dependency.is_dir()
+                and dependency.resolve().is_relative_to(Path(os.environ["RUNNER_TEMP"]).resolve()),
+                "installed probe requires a separate GitHub-only Python fixture")
+        destination = payload.fixture_directory(arguments.root, "run/pond-test-python") / "PIL"
+        shutil.copytree(dependency / "PIL", destination, symlinks=True)
+        python_environment = ["PYTHONPATH=/run/pond-test-python"]
     source = payload.fixture_directory(arguments.root, "run/pond-ci-src")
     for name in ("probe-remote-desktop.py", "probe-desktop.py"):
         shutil.copyfile(Path(__file__).with_name(name), source / name)
@@ -359,7 +368,7 @@ def outside(arguments):
         *probe.prefix,
     ]
     try:
-        probe.run(["/usr/bin/env", "GITHUB_ACTIONS=true", "/usr/bin/python", "/run/pond-ci-src/probe-remote-desktop.py", "--inside", "--report", "/run/pond-remote-report"], user=True, timeout=180)
+        probe.run(["/usr/bin/env", "GITHUB_ACTIONS=true", *python_environment, "/usr/bin/python", "/run/pond-ci-src/probe-remote-desktop.py", "--inside", "--report", "/run/pond-remote-report"], user=True, timeout=180)
     except Exception:
         comparison = {"scope": "diagnostic comparison only; native remote owner still failed", "same_prepared_root_after_native_failure": True}
         comparison_report = arguments.report / "x11-comparison"
@@ -383,6 +392,7 @@ def outside(arguments):
     evidence = json.loads((arguments.report / "evidence.json").read_text())
     evidence["initialization"] = initialized
     evidence["binary"] = binary_evidence
+    evidence["test_python_dependency"] = "/run/pond-test-python/PIL" if arguments.installed else "fixture package"
     for generation in (1, 2):
         evidence["phase"] = f"external JPEG {generation} validation"
         (arguments.report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
@@ -404,6 +414,7 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--binary", type=Path)
     parser.add_argument("--installed", action="store_true")
+    parser.add_argument("--python-fixture", type=Path)
     arguments = parser.parse_args()
     if arguments.inside:
         inside(arguments.report)
