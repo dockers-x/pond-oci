@@ -459,3 +459,12 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   repository or package failures now surface before the expensive desktop build.
   Successful probes still compile the exact accepted remoted source and execute
   the unchanged actual-desktop gate afterward.
+
+- `40806895348` ends at a transient upstream download-body TCP reset before
+  package preparation; `40807483270` subsequently downloads the same verified
+  payload and confirms its resolver link is exactly
+  `/run/systemd/resolve/stub-resolv.conf`. Creating the parent alone still fails
+  while mounting through `/etc/resolv.conf`. Remove that shared premise: the
+  rootfs owns the absolute link, while bubblewrap owns mount setup. Bind directly
+  at the observed runtime target instead of asking setup to follow the alias.
+  The rootfs link remains unchanged; no extra host configuration is exposed.

@@ -89,7 +89,7 @@ jobs:
           sudo bwrap --unshare-pid --unshare-ipc --unshare-uts --hostname pond-package-ci \
             --die-with-parent --bind "$root" / --proc /proc --dev /dev \
             --dir /run/systemd/resolve \
-            --ro-bind /etc/resolv.conf /etc/resolv.conf --clearenv \
+            --ro-bind /etc/resolv.conf /run/systemd/resolve/stub-resolv.conf --clearenv \
             --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \
             /usr/bin/pacman -Syu --noconfirm --needed cage
           sudo bwrap --unshare-pid --unshare-ipc --unshare-net --unshare-uts \
