@@ -1,0 +1,15 @@
+[Unit]
+Description=Synthetic GitHub LightOS platform prerequisite
+ConditionPathExists=/etc/lightos/seed.env
+After=network.target
+
+[Service]
+Type=oneshot
+Environment=GITHUB_ACTIONS=true
+EnvironmentFile=/etc/lightos/seed.env
+ExecStart=/usr/local/bin/pond-ci-platform-setup
+RemainAfterExit=yes
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

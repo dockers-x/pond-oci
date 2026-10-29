@@ -1,5 +1,24 @@
 # Work log
 
+## 2026-10-29 — Verify actual systemd boot of the accepted OCI, not just bwrap
+
+- Previous turn is progress: final payload acceptance 40831279349 is GREEN.
+  Keep the full LightOS delivery goal active; external proxy and final release
+  are not proved. Reuse that exact GitHub-only archive, pinned by run, source
+  commit and SHA-256, without rebuilding or downloading it locally.
+- Add a real PID1/container smoke test on GitHub. Use the image's original CMD,
+  private cgroup/network namespaces and only ephemeral runner privilege. Inject
+  an explicitly synthetic platform unit into the test container's writable
+  overlay; never replace image programs or alter the sealed OCI archive.
+- Test seeded setup with nondefault UID 1207 and an alternate home: actual Arch
+  trust preparation, account/skel, seed removal, platform marker, systemd's
+  production lighos-init unit ordering and two-run idempotence. Also boot without
+  seed and require the production marker assertion to reject initialization.
+  Neither case may create remote authentication or activate remote units.
+- This is a boot/integration test, not a copy or substitute of LightOS core and
+  not external proxy acceptance. Run it before changing production code, retain
+  bounded synthetic diagnostics, then review any concrete observed failure.
+
 ## 2026-10-29 — Final OCI payload acceptance is GREEN
 
 - Accepted recipe b232e24 / GitHub run 40831279349 succeeds through construction,
