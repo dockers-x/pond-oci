@@ -96,7 +96,7 @@ jobs:
           sudo bwrap --unshare-pid --unshare-ipc --unshare-net --unshare-uts \
             --die-with-parent --bind "$root" / --proc /proc --dev /dev --clearenv \
             --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \
-            /usr/bin/pacman -Q > "$RUNNER_TEMP/pond-remote-report/packages.txt"
+            /usr/bin/pacman -Q | sudo tee "$RUNNER_TEMP/pond-remote-report/packages.txt" > /dev/null
           sudo "$tools/rootfs-cleaner" clean --root "$root" --policy pond-oci/profiles/cleanup.toml --apply
           sudo "$tools/lighos-init" install --root "$root" --config pond-oci/profiles/lightos.toml
       - name: Probe the prepared Pond payload through its native remote desktop
