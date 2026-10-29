@@ -68,15 +68,25 @@ for case_name in seeded unseeded; do
     [[ "$(docker exec "$container_id" stat -c %u /home/pond-alternate-home)" == 1207 ]]
     docker exec "$container_id" test -f /home/pond-alternate-home/.config/niri/config.kdl
     docker exec "$container_id" systemctl restart lighos-init.service
+    docker exec "$container_id" journalctl --sync
     docker exec "$container_id" journalctl -u lighos-init.service --no-pager -o cat > "$report/initializer.log"
     python3 - "$report/initializer.log" <<'PY'
 import json
 from pathlib import Path
+import re
 import sys
 
-documents = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines() if line.startswith('{')]
+text = Path(sys.argv[1]).read_text()
+decoder = json.JSONDecoder()
+documents = [decoder.raw_decode(text[match.start():])[0] for match in re.finditer(r'(?m)^\{', text)]
 assert [document['changed'] for document in documents] == [True, False], documents
 PY
+    docker exec "$container_id" systemctl --failed --plain --no-legend --no-pager > "$report/seeded-failed-units.log"
+    if [[ -s "$report/seeded-failed-units.log" ]]; then
+      cat "$report/seeded-failed-units.log"
+      printf 'Seeded boot must not leave failed system units.\n' >&2
+      exit 1
+    fi
   else
     [[ "$(docker exec "$container_id" systemctl show --property=AssertResult --value lighos-init.service)" == no ]]
     docker exec "$container_id" test ! -e /var/lib/lightos/initialized

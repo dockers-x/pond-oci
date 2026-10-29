@@ -18,6 +18,14 @@
 - This is a boot/integration test, not a copy or substitute of LightOS core and
   not external proxy acceptance. Run it before changing production code, retain
   bounded synthetic diagnostics, then review any concrete observed failure.
+- Actual 40833952422 boots the original PID1 and successfully completes both
+  production adapter runs with the alternate user/home. The fixture parser
+  incorrectly assumes single-line JSON while the Rust CLI emits pretty JSON;
+  decode complete top-level objects and sync the real journal before reading.
+- The same actual boot exposes systemd-firstboot.service failing at STDIN:
+  this unattended container has no interactive console. Add an explicit seeded
+  failed-unit gate before changing the image policy, so a healthy adapter does
+  not silently hide a degraded initial system. Missing-seed remains negative.
 
 ## 2026-10-29 — Final OCI payload acceptance is GREEN
 
