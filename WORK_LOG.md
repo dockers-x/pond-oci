@@ -21,6 +21,10 @@
   layer read-only rsync checksum/owner/mode/link/ACL/xattr comparison to each
   candidate. Selected executables alone cannot prove the complete packaging
   boundary. Keep registry publication disabled until the other runtime gates.
+- Add regression cases for an explicit verify-installed probe mode: require
+  the reviewed binary's SHA-256 without replacing the final image binary,
+  reject missing/different/symlink payloads, and retain the old staging guard.
+  This is the next prerequisite for testing the actual unpacked OCI payload.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 

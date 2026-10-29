@@ -20,6 +20,51 @@ probe = importlib.util.module_from_spec(specification)
 specification.loader.exec_module(probe)
 
 
+class InstalledBinaryTests(unittest.TestCase):
+    def test_installed_binary_is_verified_without_replacement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = root / "reviewed"
+            installed = root / "installed"
+            expected.write_bytes(b"reviewed binary")
+            installed.write_bytes(expected.read_bytes())
+            installed.chmod(0o755)
+            before = installed.stat()
+            result = probe.stage_binary(expected, installed, installed=True)
+            self.assertEqual(result["mode"], "verify-installed")
+            self.assertEqual(result["sha256"], hashlib.sha256(expected.read_bytes()).hexdigest())
+            self.assertEqual(installed.stat(), before)
+
+    def test_installed_mode_rejects_different_missing_or_symlink_binary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = root / "reviewed"
+            installed = root / "installed"
+            expected.write_bytes(b"reviewed binary")
+            with self.assertRaisesRegex(RuntimeError, "installed"):
+                probe.stage_binary(expected, installed, installed=True)
+            installed.write_bytes(b"different binary")
+            installed.chmod(0o755)
+            with self.assertRaisesRegex(RuntimeError, "installed"):
+                probe.stage_binary(expected, installed, installed=True)
+            self.assertEqual(installed.read_bytes(), b"different binary")
+            installed.unlink()
+            installed.symlink_to(expected)
+            with self.assertRaisesRegex(RuntimeError, "installed"):
+                probe.stage_binary(expected, installed, installed=True)
+
+    def test_staging_mode_still_refuses_to_replace_existing_payload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = root / "reviewed"
+            installed = root / "installed"
+            expected.write_bytes(b"reviewed binary")
+            installed.write_bytes(b"upstream payload")
+            with self.assertRaisesRegex(RuntimeError, "replace"):
+                probe.stage_binary(expected, installed, installed=False)
+            self.assertEqual(installed.read_bytes(), b"upstream payload")
+
+
 class RemoteFrameTests(unittest.TestCase):
     def frame(self, encoded):
         server, client = socket.socketpair()
