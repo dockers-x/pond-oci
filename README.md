@@ -107,9 +107,9 @@ digest="$(python3 -c 'import json; print(json.load(open("rootfs.lock.json"))["sh
 `profiles/masked-units.txt` 是 **Pond 配方**的初版容器隔离策略，正在按桌面目标复核。
 网络重配置、防火墙、时间调整、无线监管域、引导更新、磁盘裁剪/快照等宿主控制操作
 不能因为需要桌面就全部开启。SDDM/getty 不应自行抢占 VT；必须补齐 LightOS 分配的
+终端与 Niri 会话接入。是否由受控会话启动 seatd，要根据实际 Niri seat backend 验证。
 交互式 `systemd-firstboot.service` 同样屏蔽：首次账号与设置由 LightOS 提供，
 不能在无控制台的 OCI 启动中另开交互式初始化；真实 systemd 探测已复现其失败。
-终端与 Niri 会话接入。是否由受控会话启动 seatd，要根据实际 Niri seat backend 验证。
 保留 systemd-resolved、桌面、skel 和应用内容；仅有掩码清单不是完整的 GUI 适配。
 
 ## 镜像构建

@@ -33,6 +33,15 @@
   fake success or add a console solely to satisfy an unrelated interactive path.
   Rebuild a fresh candidate and later update the accepted-candidate lock before
   re-running the same real boot test. The old archive stays immutable.
+- Independent narrow review of the JSON parser, failed-unit gate and production
+  firstboot mask finds no evidenced P1/P2. Keep the new candidate pending until
+  its complete GitHub run succeeds, then test that exact archive with the same
+  systemd gate; review does not stand in for execution.
+- Rebuilt candidate 72d8776 / 40835359201 is GREEN, including exact metadata
+  comparison, 1153 hardlink groups and final-layer native desktop captures
+  (930 and 5383 colors). Lock its archive SHA-256
+  e2eb6ace25774709d0e746256039ff63a57d016d7f671b2483cbb0700246194a
+  for the unchanged real-systemd probe. No registry release is claimed.
 
 ## 2026-10-29 — Final OCI payload acceptance is GREEN
 
