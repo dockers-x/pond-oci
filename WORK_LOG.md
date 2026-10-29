@@ -379,3 +379,18 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   initial source commit `8dac799` to `main`, with `origin/main` tracking configured.
 - No rootfs, cache, image or user credentials are in the pushed source. Runtime
   and OCI construction are still pending and are not inferred from push success.
+## 2026-10-29 — Native owner seam passes real transport reconnect
+
+- Remoted `0fad9c9` / GitHub probe `40800711240` passes actual Niri ownership,
+  relative includes, private launcher PATH and two authenticated transport
+  generations. Red/blue application pixels are verified in decoded JPEGs;
+  owner/Niri/foot PID-start identities remain unchanged across transport stop.
+- The preceding run `40798343643` exposed unsupported automatic resize claims.
+  Native owners now default to query-only output discovery; the original
+  resize-denial assertion remains, rather than relaxing acceptance.
+- Normal owner shutdown proves no live fixture descendants before fallback.
+  Abrupt publisher cancellation and private-log alias boundaries have separate
+  new regression gates; do not claim their success before actual CI evidence.
+- Image construction stays paused until those necessary extension checks close.
+  Next is the actual Pond shell via this owner/transport, then boot/settings
+  ordering and amd64 dual-registry publication, not more codec/AUR research.

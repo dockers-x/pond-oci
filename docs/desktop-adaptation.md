@@ -103,6 +103,15 @@ This is not a launcher click/app-start or real systemd/LightOS acceptance.
    seam is now resumed narrowly as a direct image dependency; unrelated
    codec/cursor/AUR research stays out of scope. Do not substitute the current
    Hyprland owner or treat an empty Niri instance as completion.
+   Remoted `0fad9c98650a9a0729dcc0bc3053869b805eed01` / GitHub probe
+   `40800711240` now passes that generic owner seam: actual Niri and an
+   included foot application survive two authenticated transport generations,
+   each delivering newly requested red/blue JPEG application pixels. Native
+   includes and PID-start identities remain unchanged; ordinary owner stop
+   leaves no live fixture children. Actual Niri/private-bus PATH is checked.
+   Unsupported automatic resize remains disabled. This is not yet the locked
+   Pond shell through the transport or a platform proxy/boot acceptance; remoted
+   cancellation and log-alias hardening regressions are still pending.
 4. Verify the explicit device policy on actual service processes without
    changing host device permissions. Numeric-policy generation is accepted,
    but real process credentials/GPU rendering have not been exercised here.
