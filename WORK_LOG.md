@@ -394,3 +394,22 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
 - Image construction stays paused until those necessary extension checks close.
   Next is the actual Pond shell via this owner/transport, then boot/settings
   ordering and amd64 dual-registry publication, not more codec/AUR research.
+
+## 2026-10-29 — Close required remoted extension and resume real payload integration
+
+- Accepted source `78acffa733bb3ffe7ef10d214ab525602f996454` passes actual
+  native-owner probe `40801658254` and the full Linux job `123210926934` in
+  `40801657709`: both features' tests/clippy, cancellation/log safety,
+  FreeRDP/X11, packaging and installer contracts. Independent narrow review
+  finds no new P1/P2. Do not describe unrelated codec/cursor/native-host jobs
+  as green; they are outside this accepted Linux owner seam.
+- Add a separate GitHub-only real-Pond-through-remoted probe using that exact
+  source. Build and download only on GitHub; preserve original rootfs/config,
+  require genuine Pond shell process identities and native sidebar, receive
+  authenticated remote JPEGs in two transport generations, then inspect decoded
+  colors and normal cleanup. This is a disposable fixture, not a packaged image.
+- Add protocol boundary cases for complete, extended, oversized, truncated and
+  unsupported WebSocket frames. First execution remains pending; missing Cage
+  or other payload prerequisites must report their real failure before any
+  package changes. Launcher app-start and actual platform boot/proxy remain
+  explicit later acceptance rather than assumed results.

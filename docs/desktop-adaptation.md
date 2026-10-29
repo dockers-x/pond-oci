@@ -111,7 +111,19 @@ This is not a launcher click/app-start or real systemd/LightOS acceptance.
    leaves no live fixture children. Actual Niri/private-bus PATH is checked.
    Unsupported automatic resize remains disabled. This is not yet the locked
    Pond shell through the transport or a platform proxy/boot acceptance; remoted
-   cancellation and log-alias hardening regressions are still pending.
+   cancellation and log-alias hardening regressions initially failed in
+   `40800945917`, then pass at `78acffa733bb3ffe7ef10d214ab525602f996454`:
+   Linux job `123210926934` in `40801657709` passes both regressions, complete
+   default and RDP/portal suites, fmt/clippy, FreeRDP/X11 and package/installer
+   guards. Actual native-owner probe `40801658254` also passes again; independent
+   narrow review reports no new P1/P2. This closes the required generic native
+   owner extension gate, not the separate full cross-platform repository CI.
+   The new GitHub-only `probe-remote-desktop.yml` pins that accepted source and
+   exercises it against the locked Pond payload. It must observe real
+   `qs -c pond-shell` process identities, the native sidebar and decoded remote
+   JPEGs over two transport generations before normal cleanup. It intentionally
+   fails for missing rootfs dependencies instead of silently installing or
+   upgrading them. No result is claimed until that workflow executes.
 4. Verify the explicit device policy on actual service processes without
    changing host device permissions. Numeric-policy generation is accepted,
    but real process credentials/GPU rendering have not been exercised here.
