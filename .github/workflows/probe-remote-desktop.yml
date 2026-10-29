@@ -139,7 +139,7 @@ jobs:
           printf '::stop-commands::%s\n' "$token"
           shopt -s nullglob
           report="$RUNNER_TEMP/pond-remote-report"
-          paths=("$report/evidence.json" "$report/owner.log" "$report/commands.log" "$report/desktop.log" "$report/xvfb.log" "$report"/transport*.log)
+          paths=("$report/evidence.json" "$report/owner.log" "$report/commands.log" "$report/desktop.log" "$report/dbus.log" "$report/xvfb.log" "$report"/transport*.log)
           for path in "${paths[@]:0:16}"; do
             if [[ -f "$path" && ! -L "$path" ]]; then
               printf '\n--- %s ---\n' "${path##*/}"

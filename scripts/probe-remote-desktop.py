@@ -22,7 +22,7 @@ specification.loader.exec_module(payload)
 BINARY = "/usr/lib/lightos-remoted/lightos-remoted"
 RUNTIME = Path(f"/run/user/{payload.USER_ID}/desktop")
 PASSWORD = "isolated-pond-remote-fixture"
-FILES = ("evidence.json", "owner.log", "transport-1.log", "transport-2.log", "frame-1.jpg", "frame-2.jpg")
+FILES = ("evidence.json", "owner.log", "desktop.log", "dbus.log", "transport-1.log", "transport-2.log", "frame-1.jpg", "frame-2.jpg")
 
 
 def require(condition, message):
@@ -144,9 +144,29 @@ def cleanup(process):
 
 def wait_for(process, predicate, message, timeout=40):
     deadline = time.monotonic() + timeout
-    while not predicate():
+    while True:
         require(process.poll() is None and time.monotonic() < deadline, message)
+        try:
+            ready = predicate()
+        except TimeoutError:
+            ready = False
+        require(process.poll() is None and time.monotonic() < deadline, message)
+        if ready:
+            return
         time.sleep(0.1)
+
+
+def runtime_diagnostics(report):
+    for name in ("desktop.log", "dbus.log"):
+        try:
+            descriptor = os.open(RUNTIME / name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        except FileNotFoundError:
+            continue
+        with os.fdopen(descriptor, "rb") as source:
+            metadata = os.fstat(source.fileno())
+            require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == os.geteuid(), "runtime diagnostic must be an owned ordinary file")
+            source.seek(max(0, metadata.st_size - 24000))
+            (report / name).write_bytes(source.read(24000))
 
 
 def inside(report):
@@ -159,9 +179,11 @@ def inside(report):
     owner = None
     transport = None
     try:
+        evidence["phase"] = "native owner startup"
         with (report / "owner.log").open("wb") as log:
             owner = subprocess.Popen([BINARY, "desktop-session", "--compositor", "niri", "--audio", "false", "--desktop-config", payload.CONFIG, "--runtime-dir", str(RUNTIME)], env=environment, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
         wait_for(owner, lambda: (RUNTIME / "session.json").is_file(), "real Pond native owner failed startup")
+        evidence["phase"] = "native socket identity"
         descriptor = json.loads((RUNTIME / "niri-environment.json").read_text())
         endpoint = Path(descriptor["niri_socket"])
         wayland = RUNTIME / descriptor["wayland_display"]
@@ -171,12 +193,14 @@ def inside(report):
         expected = Path("/usr/bin/niri").stat()
         require((actual.st_dev, actual.st_ino) == (expected.st_dev, expected.st_ino), "selected desktop peer is not native Niri")
         identities = [identity(owner.pid), identity(peer_pid)]
+        evidence["phase"] = "native Pond sidebar readiness"
         wait_for(owner, lambda: payload.pond_layers(payload.request(endpoint, "Layers").get("Layers", [])), "original Pond sidebar never appeared")
         shell = pond_processes()
         require(shell, "original Pond Quickshell process identity is missing")
         identities.extend(shell)
         generations = []
         for generation in (1, 2):
+            evidence["phase"] = f"transport {generation} startup"
             with socket.socket() as reservation:
                 reservation.bind(("127.0.0.1", 0))
                 port = reservation.getsockname()[1]
@@ -189,12 +213,14 @@ def inside(report):
                 except OSError:
                     return False
             wait_for(transport, listening, "Pond transport never listened")
+            evidence["phase"] = f"transport {generation} authenticated JPEG"
             generations.append(capture(port, report / f"frame-{generation}.jpg"))
             stop(transport)
             transport = None
             require([identity(expected[0]) for expected in identities] == identities, "transport restart changed the desktop or native shell")
             require(payload.pond_layers(payload.request(endpoint, "Layers").get("Layers", [])), "Pond shell disappeared on transport stop")
         require(Path(payload.CONFIG).read_bytes() == before, "remote startup changed the native Pond config")
+        evidence["phase"] = "normal owner shutdown"
         stop(owner)
         owner = None
         require(not (RUNTIME / "session.json").exists(), "normal owner stop left published readiness")
@@ -202,13 +228,16 @@ def inside(report):
         while any(still_live(expected) for expected in identities):
             require(time.monotonic() < deadline, "normal owner shutdown left a live native desktop process before namespace fallback")
             time.sleep(0.1)
-        evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True)
+        evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True, phase="accepted")
     finally:
-        if transport is not None:
-            cleanup(transport)
-        if owner is not None:
-            cleanup(owner)
-        (report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
+        try:
+            if transport is not None:
+                cleanup(transport)
+            if owner is not None:
+                cleanup(owner)
+        finally:
+            runtime_diagnostics(report)
+            (report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
 
 
 def outside(arguments):

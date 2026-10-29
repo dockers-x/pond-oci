@@ -487,3 +487,18 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   for `etc/pacman.d/gnupg`, retaining packaged public rings and leaving all
   platform/user initialization markers absent. Package signing remains enforced;
   the changed recipe still needs its new source/profile and real-payload gates.
+
+- Source/profile `40811000397` passes, and actual `40811262690` now completes
+  offline real GPG preparation, the signed native package transaction, Cage
+  installation, cleanup and synthetic first-boot initialization twice. Its real
+  native Niri peer is admitted before the probe aborts with an IPC timeout.
+  Container-only module/GRUB hooks also warn; this is not a physical boot claim.
+- The readiness helper aborts on the first socket timeout instead of consuming
+  its bounded readiness budget. Controlled real process/socket RED at `da4127d`
+  / `40812463749` observes both transient and persistent timeout failures, while
+  protocol errors still propagate. Retry only TimeoutError while the owner stays
+  alive; keep the same total deadline and all exact layer/frame assertions.
+- Preserve bounded owned regular-file tails of the actual Cage/Niri/Quickshell
+  and private-bus logs, plus the exact runtime phase. Earlier reports retained
+  only the outer owner's diagnostics and lost the children needed to diagnose
+  an unresolved startup failure. Do not infer Pond-shell or JPEG success yet.
