@@ -41,6 +41,10 @@
   across different inode numbers, but reject both lost links and independent
   same-content files incorrectly coalesced. Compare path equivalence classes,
   not inode numbers across separate root directories.
+- API-first regression 40827707248 fails because no topology checker exists.
+  Add the checker and gate the real candidate before runtime mutation. Its
+  equivalence classes ignore symlinks and compare relative path sets in both
+  directions. Source tests cover extra coalescing as well as link splitting.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 
