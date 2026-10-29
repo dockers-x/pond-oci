@@ -31,6 +31,10 @@ jobs:
           [[ "$PROBE_RUN" =~ ^[0-9]+$ ]]
           report="$RUNNER_TEMP/prior-probe-report"
           gh run download "$PROBE_RUN" --repo "$REPOSITORY" --name pond-remote-desktop-report --dir "$report"
+          if ! command -v identify >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y imagemagick
+          fi
           token="$(cat /proc/sys/kernel/random/uuid)"
           trap 'printf "::%s::\n" "$token"' EXIT
           printf '::stop-commands::%s\n' "$token"
@@ -40,6 +44,13 @@ jobs:
           awk '/\/dev\/shm|memfd_create|ftruncate|EACCES|ENOSPC|ENOMEM|ECONN|EPIPE/ && count++ < 100 {print substr($0, 1, 400)}' "$trace"
           printf '\n--- Startup failures ---\n'
           head -c 20000 -- "$trace"
+          for generation in 1 2; do
+            frame="$report/frame-$generation.jpg"
+            if [[ -f "$frame" && ! -L "$frame" ]]; then
+              printf '\n--- Remote JPEG %s ---\n' "$generation"
+              identify -limit memory 128MiB -limit map 256MiB -format '%w %h colors=%k mean=%[fx:mean] stddev=%[fx:standard_deviation]\n' "$frame"
+            fi
+          done
   remote-desktop:
     if: github.server_url == 'https://github.com' && inputs.inspect_run == ''
     runs-on: ubuntu-24.04

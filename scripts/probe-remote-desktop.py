@@ -347,8 +347,9 @@ def outside(arguments):
         frame = arguments.report / f"frame-{generation}.jpg"
         result = subprocess.run(["identify", "-format", "%w %h %k", str(frame)], capture_output=True, text=True, timeout=15, check=True)
         width, height, colors = map(int, result.stdout.split())
-        require(width >= 100 and height >= 100 and colors >= 256, "Pond remote stream was uniform or too small")
         evidence["generations"][generation - 1]["decoded_frame"] = {"width": width, "height": height, "colors": colors}
+        (arguments.report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
+        require(width >= 100 and height >= 100 and colors >= 256, "Pond remote stream was uniform or too small")
     evidence["phase"] = "accepted"
     (arguments.report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
     print(json.dumps(evidence, indent=2))
