@@ -439,3 +439,9 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   version manifest retained. Subsequent runtime remains network-isolated. This
   is a package-set change, not a claim that the pristine archive already works;
   rerun actual desktop acceptance and surface any keyring/repository failure.
+
+- Preserve dependency caches on GitHub for both reviewed Rust workspaces,
+  including failed runtime probes. Pin the cache action's exact revision and
+  keep lockfile/toolchain/native-build environment hashing. Cargo still builds
+  the selected source normally; this does not download artifacts locally or
+  substitute a cache hit for runtime acceptance.
