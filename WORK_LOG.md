@@ -1,5 +1,20 @@
 # Work log
 
+## 2026-10-29 — User-authorized first RC publication
+
+- Actual systemd boot 40836935044 passes both seeded and missing-seed cases
+  against candidate 40835359201, with no failed seeded units and true/false
+  initializer results. This is still synthetic platform integration, not proxy.
+- User approved 0.1.0-rc.1 to both registries. Add an RC-only promotion path,
+  retaining the exact filesystem layers and all config except the version label,
+  booting the promoted artifact again before registry credentials are used.
+- API-first source tests 40837575984 fail on the absent RC promotion module;
+  this is a missing implementation gate, not a behavioral packaging regression.
+- Publication must read back identical manifests/configs from both registries,
+  never update stable/latest, and emit a GitHub prerelease with source receipts.
+- After publication, user requests a reusable make-your-own-lightos-oci skill
+  under /home/czyt/code/others/tinyskills/skills, with Darwin optimization.
+
 ## 2026-10-29 — Verify actual systemd boot of the accepted OCI, not just bwrap
 
 - Previous turn is progress: final payload acceptance 40831279349 is GREEN.

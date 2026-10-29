@@ -1,0 +1,161 @@
+name: Publish verified desktop RC
+
+on:
+  push:
+    tags: ['v*-rc.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pond-rc-publication
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Require configured Docker Hub credentials without exposing them
+        env:
+          HAS_USERNAME: ${{ secrets.DOCKERHUB_USERNAME != '' }}
+          HAS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          [[ "$HAS_USERNAME" == true && "$HAS_TOKEN" == true ]] || { echo 'DOCKERHUB_USERNAME and DOCKERHUB_TOKEN must be available to this repository'; exit 1; }
+      - name: Validate RC policy and source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_ACTIONS" == true ]]
+          python3 -m unittest discover -s tests -v
+          python3 scripts/release-candidate.py "$GITHUB_REF_NAME"
+          run="$(jq -er .run_id candidate.json)"
+          revision="$(jq -er .recipe_revision candidate.json)"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" > "$RUNNER_TEMP/source.json"
+          jq -e --arg revision "$revision" '.conclusion == "success" and .head_sha == $revision and .path == ".github/workflows/probe-remote-desktop.yml"' "$RUNNER_TEMP/source.json"
+          boot="$(jq -er .boot_run release-candidate.json)"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$boot" > "$RUNNER_TEMP/boot.json"
+          jq -e '.conclusion == "success" and .path == ".github/workflows/probe-systemd.yml"' "$RUNNER_TEMP/boot.json"
+          boot_revision="$(jq -er .head_sha "$RUNNER_TEMP/boot.json")"
+          gh api "repos/$GITHUB_REPOSITORY/contents/candidate.json?ref=$boot_revision" --jq .content | base64 -d > "$RUNNER_TEMP/boot-candidate.json"
+          diff <(jq -S . candidate.json) <(jq -S . "$RUNNER_TEMP/boot-candidate.json")
+          gh run download "$run" --repo "$GITHUB_REPOSITORY" --name pond-desktop-amd64-candidate --dir "$RUNNER_TEMP/source"
+          expected="$(jq -er .archive_sha256 candidate.json)"
+          [[ "$(sha256sum "$RUNNER_TEMP/source/pond-desktop.oci.tar" | cut -d ' ' -f1)" == "$expected" ]]
+      - name: Promote only the version label without rebuilding the filesystem
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y skopeo umoci
+          layout="$RUNNER_TEMP/promoted-layout"
+          skopeo copy --preserve-digests "oci-archive:$RUNNER_TEMP/source/pond-desktop.oci.tar" "oci:$layout:candidate"
+          skopeo inspect --config "oci:$layout:candidate" > "$RUNNER_TEMP/original-config.json"
+          skopeo inspect --raw "oci:$layout:candidate" > "$RUNNER_TEMP/original-manifest.json"
+          version="$(python3 scripts/release-candidate.py "$GITHUB_REF_NAME")"
+          umoci config --no-history --image "$layout:candidate" --config.label "org.opencontainers.image.version=$version"
+          skopeo inspect --config "oci:$layout:candidate" > "$RUNNER_TEMP/promoted-config.json"
+          skopeo inspect --raw "oci:$layout:candidate" > "$RUNNER_TEMP/promoted-manifest.json"
+          python3 scripts/release-candidate.py "$GITHUB_REF_NAME" --original "$RUNNER_TEMP/original-config.json" --promoted "$RUNNER_TEMP/promoted-config.json"
+          diff <(jq -S .layers "$RUNNER_TEMP/original-manifest.json") <(jq -S .layers "$RUNNER_TEMP/promoted-manifest.json")
+          mkdir "$RUNNER_TEMP/release"
+          skopeo copy --preserve-digests "oci:$layout:candidate" "oci-archive:$RUNNER_TEMP/release/pond-desktop.oci.tar"
+          cp candidate.json release-candidate.json "$RUNNER_TEMP/release/"
+          cp "$RUNNER_TEMP/promoted-config.json" "$RUNNER_TEMP/release/config.json"
+          skopeo inspect --raw "oci-archive:$RUNNER_TEMP/release/pond-desktop.oci.tar" | sha256sum | cut -d ' ' -f1 > "$RUNNER_TEMP/release/manifest.sha256"
+          (cd "$RUNNER_TEMP/release" && sha256sum pond-desktop.oci.tar > archive.sha256)
+      - name: Boot the actual promoted artifact before publication
+        run: |
+          set -euo pipefail
+          sudo skopeo copy "oci-archive:$RUNNER_TEMP/release/pond-desktop.oci.tar" "docker-daemon:pond-systemd-ci:$GITHUB_RUN_ID"
+          sudo env GITHUB_ACTIONS=true GITHUB_SERVER_URL="$GITHUB_SERVER_URL" RUNNER_TEMP="$RUNNER_TEMP" GITHUB_RUN_ID="$GITHUB_RUN_ID" bash scripts/probe-systemd.sh "pond-systemd-ci:$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: promoted-desktop-rc
+          path: ${{ runner.temp }}/release
+          retention-days: 3
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: promoted-systemd-report
+          path: ${{ runner.temp }}/pond-systemd-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+      actions: read
+    env:
+      DOCKERHUB_IMAGE: ${{ vars.DOCKER_IMAGE || secrets.DOCKER_IMAGE || format('{0}/pond-oci', secrets.DOCKERHUB_USERNAME) }}
+      GHCR_IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: promoted-desktop-rc
+          path: release
+      - name: Verify prepared archive
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum -c archive.sha256
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+      - name: Authenticate and publish the exact artifact to both registries
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" && "$DOCKERHUB_IMAGE" != /pond-oci ]]
+          auth="$RUNNER_TEMP/registry-auth.json"
+          trap 'rm -f "$auth"' EXIT
+          printf '%s' "$DOCKERHUB_TOKEN" | skopeo login --authfile "$auth" --username "$DOCKERHUB_USERNAME" --password-stdin docker.io
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$auth" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          version="${GITHUB_REF_NAME#v}"
+          expected="$(cat release/manifest.sha256)"
+          for image in "docker.io/$DOCKERHUB_IMAGE" "$GHCR_IMAGE"; do
+            if skopeo inspect --authfile "$auth" --raw "docker://$image:$version" > "$RUNNER_TEMP/existing.json" 2> "$RUNNER_TEMP/inspect-error"; then
+              [[ "$(sha256sum "$RUNNER_TEMP/existing.json" | cut -d ' ' -f1)" == "$expected" ]] || { echo 'Refusing to overwrite an existing different version'; exit 1; }
+            else
+              if ! grep -Eqi 'manifest unknown|name unknown|manifest_unknown|name_unknown' "$RUNNER_TEMP/inspect-error"; then
+                cat "$RUNNER_TEMP/inspect-error" >&2
+                exit 1
+              fi
+              skopeo copy --authfile "$auth" --preserve-digests "oci-archive:release/pond-desktop.oci.tar" "docker://$image:$version"
+            fi
+            skopeo inspect --authfile "$auth" --raw "docker://$image:$version" > "$RUNNER_TEMP/remote-manifest.json"
+            [[ "$(sha256sum "$RUNNER_TEMP/remote-manifest.json" | cut -d ' ' -f1)" == "$expected" ]]
+            skopeo inspect --authfile "$auth" --config "docker://$image:$version" > "$RUNNER_TEMP/remote-config.json"
+            diff <(jq -S . release/config.json) <(jq -S . "$RUNNER_TEMP/remote-config.json")
+            printf '%s:%s@sha256:%s\n' "$image" "$version" "$expected" >> release/images.txt
+          done
+      - name: Create the GitHub prerelease with verified receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'Pond Desktop for LightOS — %s\n\n' "$GITHUB_REF_NAME"
+            printf 'Experimental amd64 release candidate; no stable/latest tags.\n\n'
+            printf 'Verified: exact filesystem metadata/hardlinks, native Niri + Pond shell, remote frames across two transports, actual systemd boot, synthetic platform setup and Rust initializer idempotence.\n\n'
+            printf 'Not yet verified: real LightOS external proxy/auth, native launcher interaction or physical VT/GPU. Optional native FFmpeg codec package is not included.\n\n'
+            printf 'Both registry manifests and configs are read back and match the promoted artifact.\n\n'
+            cat release/images.txt
+          } > release/notes.md
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to replace assets.' >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --title "Pond Desktop $GITHUB_REF_NAME" --notes-file release/notes.md release/archive.sha256 release/manifest.sha256 release/config.json release/candidate.json release/release-candidate.json release/images.txt
