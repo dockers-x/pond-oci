@@ -36,6 +36,11 @@
   Preserve the signed Arch fixture's Pillow only under /run for test decoding;
   do not install test packages into the image or replace any image binary.
   This remains a namespace/synthetic-platform test, not systemd/LightOS proxy.
+- Independent review finds rsync -H does not detect every extra hardlink at the
+  destination. Add two-direction topology regression fixtures: preserve groups
+  across different inode numbers, but reject both lost links and independent
+  same-content files incorrectly coalesced. Compare path equivalence classes,
+  not inode numbers across separate root directories.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 
