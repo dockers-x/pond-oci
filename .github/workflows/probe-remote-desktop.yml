@@ -7,6 +7,10 @@ on:
         description: Inspect an existing fixture report on GitHub instead of rebuilding
         required: false
         type: string
+      build_candidate:
+        description: Build an unpublished amd64 desktop OCI candidate after the real desktop probe passes
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -56,6 +60,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
+      REMOTED_REVISION: 78acffa733bb3ffe7ef10d214ab525602f996454
       CC_x86_64_unknown_linux_musl: musl-gcc
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
       TURBOJPEG_SOURCE: vendor
@@ -87,7 +92,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ca-x/lightos-remote-desktop
-          ref: 78acffa733bb3ffe7ef10d214ab525602f996454
+          ref: ${{ env.REMOTED_REVISION }}
           path: remoted
           persist-credentials: false
       - name: Install runner-only fixture and remote desktop build dependencies
@@ -173,6 +178,88 @@ jobs:
             --root "$RUNNER_TEMP/pond-runtime-fixture" \
             --report "$RUNNER_TEMP/pond-remote-report" \
             --binary "$GITHUB_WORKSPACE/remoted/target/release/lightos-remoted"
+      - name: Stage a fresh desktop image root without fixture accounts or authentication
+        if: inputs.build_candidate
+        env:
+          ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf -- "$RUNNER_TEMP/pond-runtime-fixture"
+          sudo env GITHUB_ACTIONS=true GITHUB_SERVER_URL="$GITHUB_SERVER_URL" RUNNER_TEMP="$RUNNER_TEMP" \
+            ROOTFS_SHA256="$ROOTFS_SHA256" \
+            KIT_BINARIES="$GITHUB_WORKSPACE/oci-kit/target/x86_64-unknown-linux-musl/release" \
+            REMOTED_BINARY="$GITHUB_WORKSPACE/remoted/target/release/lightos-remoted" \
+            bash pond-oci/scripts/stage-desktop.sh
+      - name: Construct one unpublished linux amd64 desktop OCI artifact
+        if: inputs.build_candidate
+        env:
+          IMAGE_VERSION: ${{ steps.metadata.outputs.version }}
+          KIT_REVISION: ${{ steps.metadata.outputs.kit_revision }}
+          ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo docker buildx create --name pond-desktop-candidate --driver docker-container --use
+          sudo docker buildx build --platform linux/amd64 --provenance=false \
+            --file pond-oci/Dockerfile.desktop \
+            --build-context "prepared-rootfs=$RUNNER_TEMP/pond-image-root" \
+            --build-arg "IMAGE_VERSION=$IMAGE_VERSION" --build-arg "RECIPE_REVISION=$GITHUB_SHA" \
+            --build-arg "OCI_KIT_REVISION=$KIT_REVISION" --build-arg "REMOTED_REVISION=$REMOTED_REVISION" \
+            --build-arg "ROOTFS_SHA256=$ROOTFS_SHA256" \
+            --tag "pond-lightos:$IMAGE_VERSION" \
+            --output "type=oci,dest=$RUNNER_TEMP/pond-desktop.oci.tar" pond-oci
+          sudo chmod 0644 "$RUNNER_TEMP/pond-desktop.oci.tar"
+          sudo sha256sum "$RUNNER_TEMP/pond-desktop.oci.tar" | sudo tee "$RUNNER_TEMP/pond-image-report/archive.sha256"
+      - name: Inspect the actual OCI config before retaining the candidate
+        if: inputs.build_candidate
+        env:
+          IMAGE_VERSION: ${{ steps.metadata.outputs.version }}
+          KIT_REVISION: ${{ steps.metadata.outputs.kit_revision }}
+          ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y skopeo
+          sudo skopeo inspect --config "oci-archive:$RUNNER_TEMP/pond-desktop.oci.tar" \
+            | sudo tee "$RUNNER_TEMP/pond-image-report/config.json" > /dev/null
+          jq -e --arg version "$IMAGE_VERSION" --arg revision "$GITHUB_SHA" \
+            --arg kit "$KIT_REVISION" --arg remoted "$REMOTED_REVISION" --arg rootfs "$ROOTFS_SHA256" \
+            '.architecture == "amd64" and .os == "linux" and .config.Cmd == ["/sbin/init"] and
+             .config.StopSignal == "SIGRTMIN+3" and
+             .config.Labels["org.opencontainers.image.version"] == $version and
+             .config.Labels["org.opencontainers.image.revision"] == $revision and
+             .config.Labels["eu.ca-x.oci-kit.revision"] == $kit and
+             .config.Labels["eu.ca-x.lightos-remoted.revision"] == $remoted and
+             .config.Labels["so.butterfly.rootfs.sha256"] == $rootfs' \
+            "$RUNNER_TEMP/pond-image-report/config.json"
+      - name: Inspect the actual final layer with the reviewed Rust archive reader
+        if: inputs.build_candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          layout="$RUNNER_TEMP/pond-image-layout"
+          sudo skopeo copy "oci-archive:$RUNNER_TEMP/pond-desktop.oci.tar" "oci:$layout:candidate"
+          manifest="$(jq -er '.manifests | select(length == 1) | .[0].digest | select(test("^sha256:[0-9a-f]{64}$")) | split(":")[1]' "$layout/index.json")"
+          layer="$(jq -er '.layers | select(length == 1) | .[0].digest | select(test("^sha256:[0-9a-f]{64}$")) | split(":")[1]' "$layout/blobs/sha256/$manifest")"
+          tools="$GITHUB_WORKSPACE/oci-kit/target/x86_64-unknown-linux-musl/release"
+          sudo "$tools/rootfs-inspect" --archive "$layout/blobs/sha256/$layer" \
+            --select . \
+            --text etc/lightos/remote-desktop-native.env \
+            | sudo tee "$RUNNER_TEMP/pond-image-report/layer.json" > /dev/null
+          python3 pond-oci/scripts/check-desktop-layer.py \
+            --report "$RUNNER_TEMP/pond-image-report/layer.json"
+      - name: Preserve the unpublished desktop candidate only on GitHub
+        if: inputs.build_candidate && success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pond-desktop-amd64-candidate
+          path: |
+            ${{ runner.temp }}/pond-desktop.oci.tar
+            ${{ runner.temp }}/pond-image-report
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
       - name: Print bounded remote desktop diagnostic tails
         if: always()
         shell: bash

@@ -36,6 +36,20 @@ Niri/Pond 配置；不消费宿主 seed/auth，不把初始化后的目录用于
 输入在 GitHub 端读取，不把 rootfs 或报告下载到用户机器。
 初始化、完整桌面和实际 LightOS 启动是三个不同验收层级。
 
+真实 native owner 验收 `40821662911` 已通过：保留 Pond sidebar，两个 transport
+代次解码出 1272×688、1053 色画面，owner/Niri/Quickshell 身份保持不变。
+可使用同一工作流在桌面验收成功后构建**未发布候选镜像**：
+
+```sh
+gh workflow run probe-remote-desktop.yml --repo dockers-x/pond-oci --ref main -f build_candidate=true
+```
+
+候选构建从锁定归档重新提取全新 root，不打包 synthetic 账号、认证或初始化状态；
+只在 GitHub 保留 amd64 OCI artifact，不推送 registry，也不等同于正式 Release。
+`Dockerfile.desktop` 是新的桌面候选入口；旧 `Dockerfile`/`build.yml` 仍暂停。
+最终 layer 元数据、实际 LightOS boot/proxy、launcher/app-start、可选 FFmpeg worker
+和双 registry 发布仍需各自验收，不能由上述 native owner 测试替代。
+
 工作流在 runner 中 checkout toolkit、编译 `rootfs-fetch`，再运行
 `scripts/fetch-rootfs.sh`。脚本默认：
 

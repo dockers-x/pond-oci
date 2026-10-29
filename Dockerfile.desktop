@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1.7
+FROM scratch
+ARG IMAGE_VERSION
+ARG RECIPE_REVISION
+ARG OCI_KIT_REVISION
+ARG REMOTED_REVISION
+ARG ROOTFS_SHA256
+LABEL org.opencontainers.image.title="Pond Desktop for LightOS (experimental)" \
+      org.opencontainers.image.source="https://github.com/dockers-x/pond-oci" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.revision="${RECIPE_REVISION}" \
+      so.butterfly.rootfs.sha256="${ROOTFS_SHA256}" \
+      eu.ca-x.oci-kit.revision="${OCI_KIT_REVISION}" \
+      eu.ca-x.lightos-remoted.revision="${REMOTED_REVISION}"
+COPY --from=prepared-rootfs / /
+ENV LANG=C.UTF-8
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

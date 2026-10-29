@@ -1,5 +1,34 @@
 # Work log
 
+## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
+
+- Actual syscall evidence from 40819146213, inspected only on GitHub in
+  40820205000, shows Cage shm_open of /dev/shm/wlroots-* returning EACCES.
+  Give each disposable bwrap a new 1777 tmpfs there; never bind host shm.
+  Fresh independent review finds no new P1/P2 in the mount change.
+- 40820435244 then observes both original Pond layers, stable owner/Niri/qs
+  identities across two transports and normal shutdown, but rejects the first
+  uniform JPEG. Inspector 40821182287 confirms both first frames are one color.
+- Socketpair regression RED 40821432580 reproduces premature first-frame
+  acceptance. Decode candidates without lowering the external 256-color gate.
+  Actual native GREEN 40821662911 yields two 1272x688, 1053-color JPEGs after
+  three and one candidates respectively. Synthetic frame-ID tests cover ACK
+  behavior; this fixture does not negotiate the server's sequenced flow mode.
+- Review finds the two-second socket timeout can shorten the frame deadline.
+  Delayed-frame RED 40822871259 reproduces that TimeoutError; ef68da1 carries
+  one absolute deadline through partial header/body reads. Source/profile
+  GREEN 40823095605 includes the delayed-frame regression.
+- The candidate path re-extracts the original verified archive after disposing
+  of the runtime fixture. It stages canonical units without activation/auth,
+  selects Niri, applies the Rust kit and constructs an amd64 scratch image.
+  Review catches the standalone installer's deliberate refusal of existing
+  custom drop-ins: stage canonical remoted first, then install the Rust hook.
+- Inspect the actual OCI config and single final tar layer on GitHub, using
+  the reviewed Rust archive reader and virtual-root metadata checks for masks,
+  executable ownership, native config links and absent instance state. This
+  is not complete retained-xattr, LightOS boot/proxy, launcher, codec-worker
+  or registry-release acceptance.
+
 ## 2026-10-29 — Separate native shell queries from launcher/app-start evidence
 
 - Bounded independent read-only review confirms that the payload-audited
