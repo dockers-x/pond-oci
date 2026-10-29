@@ -19,7 +19,7 @@ setcap cap_net_bind_service=ep "$root/capability"
 tar --format=pax --numeric-owner --xattrs --acls -cpf "$context/rootfs.tar" -C "$root" .
 docker buildx create --name pond-metadata --driver docker-container --use
 docker buildx build --platform linux/amd64 --provenance=false \
-  --file "$repository/Dockerfile.desktop" --build-context "prepared-rootfs=$root" \
+  --file "$repository/Dockerfile.desktop" \
   --output "type=oci,dest=$workspace/image.tar" "$context"
 tar -xf "$workspace/image.tar" -C "$workspace/layout"
 manifest="$(jq -er '.manifests | select(length == 1) | .[0].digest | split(":")[1]' "$workspace/layout/index.json")"

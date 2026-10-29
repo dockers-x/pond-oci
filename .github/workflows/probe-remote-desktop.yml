@@ -200,15 +200,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          context="$RUNNER_TEMP/pond-desktop-context"
+          mkdir "$context"
+          sudo tar --format=pax --numeric-owner --xattrs --acls \
+            -cpf "$context/rootfs.tar" -C "$RUNNER_TEMP/pond-image-root" .
           sudo docker buildx create --name pond-desktop-candidate --driver docker-container --use
           sudo docker buildx build --platform linux/amd64 --provenance=false \
             --file pond-oci/Dockerfile.desktop \
-            --build-context "prepared-rootfs=$RUNNER_TEMP/pond-image-root" \
             --build-arg "IMAGE_VERSION=$IMAGE_VERSION" --build-arg "RECIPE_REVISION=$GITHUB_SHA" \
             --build-arg "OCI_KIT_REVISION=$KIT_REVISION" --build-arg "REMOTED_REVISION=$REMOTED_REVISION" \
             --build-arg "ROOTFS_SHA256=$ROOTFS_SHA256" \
             --tag "pond-lightos:$IMAGE_VERSION" \
-            --output "type=oci,dest=$RUNNER_TEMP/pond-desktop.oci.tar" pond-oci
+            --output "type=oci,dest=$RUNNER_TEMP/pond-desktop.oci.tar" "$context"
+          sudo rm -- "$context/rootfs.tar"
           sudo chmod 0644 "$RUNNER_TEMP/pond-desktop.oci.tar"
           sudo sha256sum "$RUNNER_TEMP/pond-desktop.oci.tar" | sudo tee "$RUNNER_TEMP/pond-image-report/archive.sha256"
       - name: Inspect the actual OCI config before retaining the candidate

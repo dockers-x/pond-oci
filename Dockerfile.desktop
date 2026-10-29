@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.title="Pond Desktop for LightOS (experimental)" \
       so.butterfly.rootfs.sha256="${ROOTFS_SHA256}" \
       eu.ca-x.oci-kit.revision="${OCI_KIT_REVISION}" \
       eu.ca-x.lightos-remoted.revision="${REMOTED_REVISION}"
-COPY --from=prepared-rootfs / /
+ADD rootfs.tar /
 ENV LANG=C.UTF-8
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

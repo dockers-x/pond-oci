@@ -10,6 +10,12 @@
   absolute symlink and a security.capability xattr. The existing selected-path
   gate does not establish preservation of those properties. Run this probe
   before changing the packaging mechanism; do not download candidate artifacts.
+- Actual recipe probe 40826215049 is behavioral RED after a successful build:
+  `owned` changes from 1234:2345:2750 to 0:0:2750. Thus 40824541717 is not a
+  release-quality artifact despite its selected-path gate passing. Replace the
+  local-context COPY with numeric-owner pax tar + ADD, preserving archive
+  ownership rather than flattening the rootfs to root. Re-run the same probe
+  including hardlink identity and security.capability before another candidate.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 
