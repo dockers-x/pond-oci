@@ -53,6 +53,11 @@
   using umoci raw add-layer and require its original SHA-256 as the sole diff_id.
   Extend the tiny gate to root permissions and access/default ACLs. No registry
   release or final-runtime success is claimed before this passes on GitHub.
+- Raw candidate 40829238410 preserves all observed file metadata and both ACLs,
+  but full comparison rejects only the extraction root's mtime (`.d..t......`).
+  Keep the gate strict and add a fixed old root mtime to the tiny behavioral
+  probe to distinguish extraction metadata from a changed application payload.
+  The final native runtime step has not yet run; no candidate is retained.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 
