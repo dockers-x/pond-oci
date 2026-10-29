@@ -62,7 +62,7 @@ def capture(port, destination):
     with socket.create_connection(("127.0.0.1", port), timeout=3) as connection:
         connection.settimeout(2)
         key = base64.b64encode(os.urandom(16)).decode()
-        authorization = base64.b64encode(f"admin:{PASSWORD}".encode()).decode()
+        authorization = base64.b64encode(f"lightos:{PASSWORD}".encode()).decode()
         connection.sendall((f"GET /ws HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nOrigin: http://127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: {key}\r\nAuthorization: Basic {authorization}\r\n\r\n").encode())
         header = bytearray()
         while not header.endswith(b"\r\n\r\n"):
@@ -148,7 +148,7 @@ def inside(report):
     require(os.environ.get("GITHUB_ACTIONS") == "true" and Path("/.oci-kit-staging").is_file() and not Path("/.oci-kit-staging").is_symlink(), "inside mode requires a marked disposable GitHub rootfs")
     require(report == Path("/run/pond-remote-report") and Path(__file__).parent == Path("/run/pond-ci-src"), "inside mode refuses a non-fixture layout")
     require(os.geteuid() == payload.USER_ID, "remote fixture must use the disposable platform account")
-    environment = dict(os.environ, LIBGL_ALWAYS_SOFTWARE="1", GALLIUM_DRIVER="llvmpipe", WLR_RENDERER="pixman", LIGHTOS_REMOTE_DESKTOP_AUTH_PASSWORD=PASSWORD)
+    environment = dict(os.environ, LIBGL_ALWAYS_SOFTWARE="1", GALLIUM_DRIVER="llvmpipe", WLR_RENDERER="pixman", LIGHTOS_REMOTE_DESKTOP_AUTH_USER="lightos", LIGHTOS_REMOTE_DESKTOP_AUTH_PASSWORD=PASSWORD)
     evidence = {"scope": "real Pond payload and native remote owner, not LightOS boot/proxy", "platform_proxy_tested": False, "launcher_app_start_tested": False}
     before = Path(payload.CONFIG).read_bytes()
     owner = None
