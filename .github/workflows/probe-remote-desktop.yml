@@ -204,20 +204,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          context="$RUNNER_TEMP/pond-desktop-context"
-          mkdir "$context"
-          sudo tar --format=pax --numeric-owner --xattrs --acls \
-            -cpf "$context/rootfs.tar" -C "$RUNNER_TEMP/pond-image-root" .
-          sudo docker buildx create --name pond-desktop-candidate --driver docker-container --use
-          sudo docker buildx build --platform linux/amd64 --provenance=false \
-            --file pond-oci/Dockerfile.desktop \
-            --build-arg "IMAGE_VERSION=$IMAGE_VERSION" --build-arg "RECIPE_REVISION=$GITHUB_SHA" \
-            --build-arg "OCI_KIT_REVISION=$KIT_REVISION" --build-arg "REMOTED_REVISION=$REMOTED_REVISION" \
-            --build-arg "ROOTFS_SHA256=$ROOTFS_SHA256" \
-            --tag "pond-lightos:$IMAGE_VERSION" \
-            --output "type=oci,dest=$RUNNER_TEMP/pond-desktop.oci.tar" "$context"
-          sudo rm -- "$context/rootfs.tar"
-          sudo chmod 0644 "$RUNNER_TEMP/pond-desktop.oci.tar"
+          sudo apt-get install -y umoci skopeo rsync
+          sudo env GITHUB_ACTIONS=true GITHUB_SERVER_URL="$GITHUB_SERVER_URL" RUNNER_TEMP="$RUNNER_TEMP" \
+            IMAGE_VERSION="$IMAGE_VERSION" RECIPE_REVISION="$GITHUB_SHA" \
+            KIT_REVISION="$KIT_REVISION" REMOTED_REVISION="$REMOTED_REVISION" ROOTFS_SHA256="$ROOTFS_SHA256" \
+            bash pond-oci/scripts/package-desktop.sh "$RUNNER_TEMP/pond-image-root" \
+            "$RUNNER_TEMP/pond-packed-layout" "$RUNNER_TEMP/pond-desktop.oci.tar"
+          sudo rm -rf -- "$RUNNER_TEMP/pond-packed-layout"
           sudo sha256sum "$RUNNER_TEMP/pond-desktop.oci.tar" | sudo tee "$RUNNER_TEMP/pond-image-report/archive.sha256"
       - name: Inspect the actual OCI config before retaining the candidate
         if: inputs.build_candidate
@@ -263,7 +256,7 @@ jobs:
             -xpf "$layout/blobs/sha256/$layer" -C "$final"
           sudo rsync -aHAXnci --numeric-ids --delete \
             "$RUNNER_TEMP/pond-image-root/" "$final/" \
-            | tee "$RUNNER_TEMP/pond-image-report/rootfs-differences.txt"
+            | sudo tee "$RUNNER_TEMP/pond-image-report/rootfs-differences.txt"
           if [[ -s "$RUNNER_TEMP/pond-image-report/rootfs-differences.txt" ]]; then
             printf '::error::Final OCI payload differs from the staged rootfs.\n'
             exit 1
@@ -271,7 +264,7 @@ jobs:
           sudo env GITHUB_ACTIONS=true RUNNER_TEMP="$RUNNER_TEMP" \
             python3 pond-oci/scripts/check-hardlinks.py \
             --staged "$RUNNER_TEMP/pond-image-root" --final "$final" \
-            | tee "$RUNNER_TEMP/pond-image-report/hardlinks.json"
+            | sudo tee "$RUNNER_TEMP/pond-image-report/hardlinks.json"
       - name: Probe initialization and native desktop from the actual final OCI payload
         if: inputs.build_candidate
         shell: bash

@@ -15,5 +15,5 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y libarchive-tools attr libcap2-bin
+      - run: sudo apt-get update && sudo apt-get install -y libarchive-tools attr acl libcap2-bin umoci skopeo
       - run: sudo env GITHUB_ACTIONS=true GITHUB_SERVER_URL="$GITHUB_SERVER_URL" RUNNER_TEMP="$RUNNER_TEMP" bash scripts/probe-packaging.sh

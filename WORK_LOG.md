@@ -45,6 +45,14 @@
   Add the checker and gate the real candidate before runtime mutation. Its
   equivalence classes ignore symlinks and compare relative path sets in both
   directions. Source tests cover extra coalescing as well as link splitting.
+- Full candidate fab4975 / 40826727046 is RED: after successful ADD construction,
+  root metadata and ACLs on run/tpm2-tss/eventlog and var/lib/tpm2-tss/system/
+  keystore differ. Also correct root-owned report writes to sudo tee. Do not
+  weaken the full comparison. Two builder transformations fail preservation:
+  remove the transformation. Directly attach the original numeric-owner pax tar
+  using umoci raw add-layer and require its original SHA-256 as the sole diff_id.
+  Extend the tiny gate to root permissions and access/default ACLs. No registry
+  release or final-runtime success is claimed before this passes on GitHub.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 

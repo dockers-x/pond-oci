@@ -46,10 +46,11 @@ gh workflow run probe-remote-desktop.yml --repo dockers-x/pond-oci --ref main -f
 
 候选构建从锁定归档重新提取全新 root，不打包 synthetic 账号、认证或初始化状态；
 只在 GitHub 保留 amd64 OCI artifact，不推送 registry，也不等同于正式 Release。
-`Dockerfile.desktop` 是新的桌面候选入口；旧 `Dockerfile`/`build.yml` 仍暂停。
-打包使用数字 UID/GID 的 pax tar + `ADD`，不能直接 `COPY` 本地目录：真实回归测试
-已证明后者会将非 root 文件所有权改成 `root:root`。GitHub 的 `probe-packaging.yml`
-检查真实 Dockerfile 的 UID/GID、特殊权限、硬链接、绝对软链接及文件 capability。
+`scripts/package-desktop.sh` 是桌面 OCI 打包入口；旧 `Dockerfile`/`build.yml` 仍暂停。
+打包直接封装数字 UID/GID 的 pax tar 为 OCI layer，不让构建器解包再重打包：真实检查
+已证明 `COPY` 会重置所有权，而 `ADD` 仍丢失部分 ACL。使用 `umoci raw add-layer`
+保留原始 layer，并检查其 diff_id 等于源 tar 的 SHA-256。GitHub 的 `probe-packaging.yml`
+检查真实入口的根目录权限、UID/GID、ACL、特殊权限、硬链接、软链接及 capability。
 完整候选还需解包最终 OCI layer，以只读 rsync 校验全目录内容、所有权、权限、链接、
 ACL 和 xattrs 与 staging root 一致；验收后仍需独立测试最终镜像内的初始化与桌面。
 实际 LightOS boot/proxy、launcher/app-start、可选 FFmpeg worker
