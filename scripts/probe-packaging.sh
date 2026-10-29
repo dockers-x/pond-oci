@@ -25,7 +25,8 @@ mkdir "$workspace/layout"
 tar -xf "$workspace/image.tar" -C "$workspace/layout"
 manifest="$(jq -er '.manifests | select(length == 1) | .[0].digest | split(":")[1]' "$workspace/layout/index.json")"
 layer="$(jq -er '.layers | select(length == 1) | .[0].digest | split(":")[1]' "$workspace/layout/blobs/sha256/$manifest")"
-bsdtar --numeric-owner --xattrs --acls -xpf "$workspace/layout/blobs/sha256/$layer" -C "$workspace/extracted"
+tar --numeric-owner --xattrs --xattrs-include='*' --acls \
+  -xpf "$workspace/layout/blobs/sha256/$layer" -C "$workspace/extracted"
 for path in . acl owned owned/payload owned/alias capability absolute-link; do
   expected="$(stat -c '%u:%g:%a:%Y' "$root/$path")"
   actual="$(stat -c '%u:%g:%a:%Y' "$workspace/extracted/$path")"

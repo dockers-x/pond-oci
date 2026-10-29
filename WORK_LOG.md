@@ -58,6 +58,12 @@
   Keep the gate strict and add a fixed old root mtime to the tiny behavioral
   probe to distinguish extraction metadata from a changed application payload.
   The final native runtime step has not yet run; no candidate is retained.
+- Tiny fixed-time run 40830763626 reproduces the extraction-only RED:
+  original root mtime 946684800 becomes 1793256128 while the original tar
+  diff_id is intact and root permissions are preserved. Use GNU tar with
+  numeric-owner, all xattrs and ACL restoration for the final test extraction,
+  matching the source archive producer. Keep timestamps in the comparison;
+  do not hide the difference with rsync -O or touch the destination afterwards.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 

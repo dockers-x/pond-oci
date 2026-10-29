@@ -252,7 +252,7 @@ jobs:
             --report "$RUNNER_TEMP/pond-image-report/layer.json"
           final="$RUNNER_TEMP/pond-final-root"
           sudo mkdir "$final"
-          sudo bsdtar --numeric-owner --xattrs --acls \
+          sudo tar --numeric-owner --xattrs --xattrs-include='*' --acls \
             -xpf "$layout/blobs/sha256/$layer" -C "$final"
           sudo rsync -aHAXnci --numeric-ids --delete \
             "$RUNNER_TEMP/pond-image-root/" "$final/" \
