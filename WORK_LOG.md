@@ -520,3 +520,11 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   before cleanup. Read no process environments or auth files. This distinguishes
   changed native layer names, unavailable Qt platform and blocked rendering
   without rewriting Pond config or substituting an empty compositor.
+
+- On native-owner failure only, compare the previously proven raw Niri/Xvfb
+  startup against the same updated, initialized disposable root. Retain separate
+  comparison logs and explicitly record that this is a post-failure diagnostic,
+  not a cold-start control or a substitute desktop acceptance. Always rethrow
+  the original native failure, even when this comparison renders successfully.
+  This distinguishes a changed package/config baseline from parent/backend
+  integration without repeating the rootfs download and package transaction.

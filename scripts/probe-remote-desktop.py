@@ -273,7 +273,8 @@ def inside(report):
         evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True, phase="remote capture complete, awaiting external JPEG validation")
     finally:
         try:
-            evidence["runtime_processes"] = process_diagnostics(native_pid)
+            if owner is not None:
+                evidence["runtime_processes"] = process_diagnostics(native_pid)
         except Exception as error:
             evidence["process_diagnostic_error"] = str(error)
         try:
@@ -313,6 +314,20 @@ def outside(arguments):
     initialized = probe.initialize()
     try:
         probe.run(["/usr/bin/env", "GITHUB_ACTIONS=true", "/usr/bin/python", "/run/pond-ci-src/probe-remote-desktop.py", "--inside", "--report", "/run/pond-remote-report"], user=True, timeout=180)
+    except Exception:
+        comparison = {"scope": "diagnostic comparison only; native remote owner still failed", "same_prepared_root_after_native_failure": True}
+        comparison_report = arguments.report / "x11-comparison"
+        try:
+            comparison_report.mkdir(parents=True, exist_ok=True)
+            baseline = payload.Probe(arguments.root, comparison_report)
+            comparison["desktop"] = baseline.desktop()
+        except Exception as error:
+            comparison["error"] = str(error)
+        try:
+            (comparison_report / "evidence.json").write_text(json.dumps(comparison, indent=2) + "\n")
+        except Exception as error:
+            print(f"X11 comparison report unavailable: {error}", file=sys.stderr)
+        raise
     finally:
         for name in FILES:
             path = destination / name
