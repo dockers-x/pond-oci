@@ -510,3 +510,13 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   content. Keep the no-follow/type/owner/size checks; record per-log optional
   diagnostic failures, continue the other log, and attempt evidence writing in
   its own finally. This does not convert a failed native desktop gate to success.
+
+- `fabbfff` source/profile gates pass in `40813835065`. Actual
+  `40814131202` reaches the unchanged native-sidebar readiness deadline;
+  diagnostics show Niri 26.04 admitted, `qs -c pond-shell` activating its private
+  bus, and no log-collection errors. Thus a longer wait alone is not the fix.
+  Retain the failed gate and record actual Layers replies vs timeout counts,
+  plus verified Niri/Quickshell wait channels and Qt platform module basenames
+  before cleanup. Read no process environments or auth files. This distinguishes
+  changed native layer names, unavailable Qt platform and blocked rendering
+  without rewriting Pond config or substituting an empty compositor.

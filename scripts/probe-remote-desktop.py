@@ -126,6 +126,30 @@ def still_live(expected):
         return False
 
 
+def process_diagnostics(native_pid):
+    observed = []
+    identities = pond_processes()
+    if native_pid is not None:
+        identities.insert(0, identity(native_pid))
+    for expected in identities:
+        item = {"identity": expected}
+        try:
+            process = Path(f"/proc/{expected[0]}")
+            item["wait_channel"] = (process / "wchan").read_text()[:128].strip()
+            with (process / "maps").open() as source:
+                mappings = source.read(2 * 1024 * 1024 + 1)
+            require(len(mappings) <= 2 * 1024 * 1024, "oversized process module metadata")
+            item["qt_platform_plugins"] = sorted({
+                Path(line.split(maxsplit=5)[-1].removesuffix(" (deleted)")).name
+                for line in mappings.splitlines() if "/plugins/platforms/libq" in line
+            })
+            require(identity(expected[0]) == expected, "diagnostic process identity changed")
+        except Exception as error:
+            item["error"] = str(error)
+        observed.append(item)
+    return observed
+
+
 def stop(process):
     require(process.poll() is None, "desktop process exited before the requested normal stop")
     process.terminate()
@@ -183,6 +207,7 @@ def inside(report):
     before = Path(payload.CONFIG).read_bytes()
     owner = None
     transport = None
+    native_pid = None
     try:
         evidence["phase"] = "native owner startup"
         with (report / "owner.log").open("wb") as log:
@@ -193,13 +218,25 @@ def inside(report):
         endpoint = Path(descriptor["niri_socket"])
         wayland = RUNTIME / descriptor["wayland_display"]
         peer_pid, peer_uid, _ = payload.socket_peer(endpoint)
+        native_pid = peer_pid
         require(peer_uid == os.geteuid() and payload.socket_peer(wayland)[:2] == (peer_pid, peer_uid), "Pond sockets do not share the actual Niri peer")
         actual = Path(f"/proc/{peer_pid}/exe").stat()
         expected = Path("/usr/bin/niri").stat()
         require((actual.st_dev, actual.st_ino) == (expected.st_dev, expected.st_ino), "selected desktop peer is not native Niri")
         identities = [identity(owner.pid), identity(peer_pid)]
         evidence["phase"] = "native Pond sidebar readiness"
-        wait_for(owner, lambda: payload.pond_layers(payload.request(endpoint, "Layers").get("Layers", [])), "original Pond sidebar never appeared")
+        sidebar_probe = {"attempts": 0, "timeouts": 0, "last_reply": None}
+        evidence["sidebar_probe"] = sidebar_probe
+        def sidebar_ready():
+            sidebar_probe["attempts"] += 1
+            try:
+                reply = payload.request(endpoint, "Layers")
+            except TimeoutError:
+                sidebar_probe["timeouts"] += 1
+                raise
+            sidebar_probe["last_reply"] = reply
+            return payload.pond_layers(reply.get("Layers", []))
+        wait_for(owner, sidebar_ready, "original Pond sidebar never appeared")
         shell = pond_processes()
         require(shell, "original Pond Quickshell process identity is missing")
         identities.extend(shell)
@@ -235,6 +272,10 @@ def inside(report):
             time.sleep(0.1)
         evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True, phase="remote capture complete, awaiting external JPEG validation")
     finally:
+        try:
+            evidence["runtime_processes"] = process_diagnostics(native_pid)
+        except Exception as error:
+            evidence["process_diagnostic_error"] = str(error)
         try:
             if transport is not None:
                 cleanup(transport)
