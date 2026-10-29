@@ -33,7 +33,9 @@ class InstalledBinaryTests(unittest.TestCase):
             result = probe.stage_binary(expected, installed, installed=True)
             self.assertEqual(result["mode"], "verify-installed")
             self.assertEqual(result["sha256"], hashlib.sha256(expected.read_bytes()).hexdigest())
-            self.assertEqual(installed.stat(), before)
+            after = installed.stat()
+            self.assertEqual((after.st_ino, after.st_mode, after.st_mtime_ns, after.st_ctime_ns),
+                             (before.st_ino, before.st_mode, before.st_mtime_ns, before.st_ctime_ns))
 
     def test_installed_mode_rejects_different_missing_or_symlink_binary(self):
         with tempfile.TemporaryDirectory() as directory:
