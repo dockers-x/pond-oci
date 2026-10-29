@@ -413,3 +413,11 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   or other payload prerequisites must report their real failure before any
   package changes. Launcher app-start and actual platform boot/proxy remain
   explicit later acceptance rather than assumed results.
+
+- First actual remote-payload run `40803934219` reaches the rootfs preflight,
+  but rejects `qs` before executing the desktop. The outer `Path.is_file()`
+  follows an absolute rootfs symlink in the runner's filesystem, unlike the
+  previously accepted real-payload boundary. Check executability using `test -x`
+  inside the disposable namespace and report all missing prerequisites together;
+  do not install packages based on this misleading outer-path failure. HTTP
+  fixture identity was separately corrected to explicit `lightos` at `60cb422`.

@@ -211,8 +211,13 @@ def outside(arguments):
     payload.validate_fixture(arguments.root, arguments.report, Path(os.environ["RUNNER_TEMP"]))
     require(arguments.binary.is_file() and not arguments.binary.is_symlink(), "fixture binary must be an ordinary GitHub build output")
     arguments.report.mkdir(parents=True, exist_ok=True)
+    probe = payload.Probe(arguments.root, arguments.report)
+    missing = []
     for program in ("niri", "qs", "cage", "python", "setpriv"):
-        require((arguments.root / "usr/bin" / program).is_file(), f"real rootfs is missing remote prerequisite: {program}")
+        result = probe.run(["/usr/bin/test", "-x", f"/usr/bin/{program}"], timeout=15, check=False)
+        if result.returncode:
+            missing.append(program)
+    require(not missing, f"real rootfs is missing remote prerequisites inside its own namespace: {', '.join(missing)}")
     binary = payload.fixture_directory(arguments.root, "usr/lib/lightos-remoted") / "lightos-remoted"
     require(not binary.exists() and not binary.is_symlink(), "fixture refuses to replace an upstream remote binary")
     shutil.copyfile(arguments.binary, binary)
@@ -223,7 +228,6 @@ def outside(arguments):
     destination = payload.fixture_directory(arguments.root, "run/pond-remote-report")
     destination.chmod(0o700)
     os.chown(destination, payload.USER_ID, payload.USER_ID)
-    probe = payload.Probe(arguments.root, arguments.report)
     initialized = probe.initialize()
     try:
         probe.run(["/usr/bin/env", "GITHUB_ACTIONS=true", "/usr/bin/python", "/run/pond-ci-src/probe-remote-desktop.py", "--inside", "--report", "/run/pond-remote-report"], user=True, timeout=180)
