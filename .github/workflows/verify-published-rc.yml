@@ -1,0 +1,31 @@
+name: Verify public RC registry access
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Report GHCR package visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api orgs/dockers-x/packages/container/pond-oci --jq '{name,visibility}'
+      - name: Verify anonymous access and the published manifest identity
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          expected=786ec1fb807f5f15e9fdaaa435615e6b0ed576c562b0e359923fea8b4ede1644
+          for image in docker.io/czyt/pond-oci ghcr.io/dockers-x/pond-oci; do
+            skopeo inspect --no-creds --raw "docker://$image:0.1.0-rc.1" > "$RUNNER_TEMP/manifest.json"
+            [[ "$(sha256sum "$RUNNER_TEMP/manifest.json" | cut -d ' ' -f1)" == "$expected" ]]
+            skopeo inspect --no-creds --config --raw "docker://$image:0.1.0-rc.1" > "$RUNNER_TEMP/config.json"
+            jq -e '.architecture == "amd64" and .config.Cmd == ["/sbin/init"] and .config.Labels["org.opencontainers.image.version"] == "0.1.0-rc.1"' "$RUNNER_TEMP/config.json"
+            printf 'Anonymous access verified: %s:0.1.0-rc.1@sha256:%s\n' "$image" "$expected"
+          done

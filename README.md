@@ -112,10 +112,27 @@ digest="$(python3 -c 'import json; print(json.load(open("rootfs.lock.json"))["sh
 不能在无控制台的 OCI 启动中另开交互式初始化；真实 systemd 探测已复现其失败。
 保留 systemd-resolved、桌面、skel 和应用内容；仅有掩码清单不是完整的 GUI 适配。
 
+## 已发布的桌面 RC
+
+`0.1.0-rc.1` 是实验性的 amd64 桌面候选，不是稳定版；未更新 `latest`。
+
+```text
+docker.io/czyt/pond-oci:0.1.0-rc.1
+ghcr.io/dockers-x/pond-oci:0.1.0-rc.1
+sha256:786ec1fb807f5f15e9fdaaa435615e6b0ed576c562b0e359923fea8b4ede1644
+```
+
+发布 run `40838726153` 已回读两个 registry 的 manifest/config 并确认一致。
+候选通过完整元数据/hardlink、原生 Niri/Pond shell、两代 transport 画面，以及
+真实 systemd/PID1＋synthetic 平台 setup/Rust 初始化幂等验收。
+真实 LightOS 外部代理/认证、launcher 交互、物理 VT/GPU 尚未验收；可选 FFmpeg worker 未包含。
+GitHub prerelease `v0.1.0-rc.1` 保留来源、配置与摘要 receipts。
+
 ## 镜像构建
 
-原构建入口暂时关闭：下面描述的是已成功构建过的初版处理方式，不是当前可发布的桌面成品。
-先完成 Rust adapter 的桌面相关能力与 GitHub 验收，再恢复桌面镜像打包和双 registry 发布。
+原 headless 构建入口保持关闭；下面的旧内部入口不是当前桌面 RC 的构建方式。
+桌面构建使用 `probe-remote-desktop.yml` 的候选流程、`scripts/package-desktop.sh` 保真封装，
+再由 `probe-systemd.yml` 验收和 `publish-rc.yml` 晋级发布，不通过旧 Dockerfile 重建成品。
 
 Actions runner 提供 Docker + Buildx，以及相邻的 `oci-kit` 源码。
 工作流通过以下内部入口构建；脚本不安装/启动本机 daemon，

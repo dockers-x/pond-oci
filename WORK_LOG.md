@@ -2,6 +2,14 @@
 
 ## 2026-10-29 — User-authorized first RC publication
 
+- Publication 40838726153 at immutable tag v0.1.0-rc.1 / 5be20f7 is GREEN.
+  The promoted artifact boots again, and both registries read back the same
+  manifest/config: sha256:786ec1fb807f5f15e9fdaaa435615e6b0ed576c562b0e359923fea8b4ede1644.
+  Images are docker.io/czyt/pond-oci and ghcr.io/dockers-x/pond-oci, version
+  0.1.0-rc.1 only. GitHub prerelease receipts are uploaded; no stable/latest.
+  Add a separate GitHub anonymous-access check rather than assuming successful
+  authenticated publication makes a new GHCR package publicly pullable.
+
 - Actual systemd boot 40836935044 passes both seeded and missing-seed cases
   against candidate 40835359201, with no failed seeded units and true/false
   initializer results. This is still synthetic platform integration, not proxy.
