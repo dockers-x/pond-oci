@@ -430,3 +430,12 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   The accepted remoted binary already returns zero on normal TERM, as required
   by its previously green actual-owner test. Do not accept a crashed transport
   as successful reconnect/shutdown merely because its desktop survived.
+
+- Correct namespace preflight `40804832799` now confirms the actual missing
+  dependency is Cage only; Niri, `qs`, Python and setpriv are present. Add the
+  explicit recipe package-preparation stage before cleanup: native pacman with
+  full Arch upgrade plus Cage, existing signature policy unchanged, network
+  available only for that isolated GitHub package transaction, and full installed
+  version manifest retained. Subsequent runtime remains network-isolated. This
+  is a package-set change, not a claim that the pristine archive already works;
+  rerun actual desktop acceptance and surface any keyring/repository failure.

@@ -122,8 +122,13 @@ This is not a launcher click/app-start or real systemd/LightOS acceptance.
    exercises it against the locked Pond payload. It must observe real
    `qs -c pond-shell` process identities, the native sidebar and decoded remote
    JPEGs over two transport generations before normal cleanup. It intentionally
-   fails for missing rootfs dependencies instead of silently installing or
-   upgrading them. No result is claimed until that workflow executes.
+   first reports missing rootfs dependencies instead of silently adding them.
+   Actual run `40804832799` now verifies `niri`, `qs`, Python and `setpriv`
+   inside the rootfs namespace and rejects only missing `cage`. The recipe's
+   next explicit preparation step installs Cage with a supported Arch full
+   package transaction before cleanup, preserving signature checks and recording
+   `pacman -Q` provenance. This changes the base package set and requires a fresh
+   native desktop acceptance; it is not evidence about the untouched archive.
 4. Verify the explicit device policy on actual service processes without
    changing host device permissions. Numeric-policy generation is accepted,
    but real process credentials/GPU rendering have not been exercised here.

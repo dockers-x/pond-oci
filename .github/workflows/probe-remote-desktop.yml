@@ -87,9 +87,19 @@ jobs:
           sudo install -d -m 0755 "$root"
           sudo bsdtar --numeric-owner --acls --xattrs -xpf "pond-oci/.cache/$ROOTFS_SHA256/pond-rootfs.tar.zst" -C "$root"
           sudo "$tools/rootfs-cleaner" mark --root "$root"
+          sudo install -d -m 0755 "$RUNNER_TEMP/pond-remote-report"
+          sudo bwrap --unshare-pid --unshare-ipc --unshare-uts --hostname pond-package-ci \
+            --die-with-parent --bind "$root" / --proc /proc --dev /dev \
+            --ro-bind /etc/resolv.conf /etc/resolv.conf --clearenv \
+            --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \
+            /usr/bin/pacman -Syu --noconfirm --needed cage
+          sudo bwrap --unshare-pid --unshare-ipc --unshare-net --unshare-uts \
+            --die-with-parent --bind "$root" / --proc /proc --dev /dev --clearenv \
+            --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \
+            /usr/bin/pacman -Q > "$RUNNER_TEMP/pond-remote-report/packages.txt"
           sudo "$tools/rootfs-cleaner" clean --root "$root" --policy pond-oci/profiles/cleanup.toml --apply
           sudo "$tools/lighos-init" install --root "$root" --config pond-oci/profiles/lightos.toml
-      - name: Probe the locked payload without installing or upgrading rootfs packages
+      - name: Probe the prepared Pond payload through its native remote desktop
         run: |
           sudo env GITHUB_ACTIONS=true RUNNER_TEMP="$RUNNER_TEMP" \
             python3 pond-oci/scripts/probe-remote-desktop.py \
