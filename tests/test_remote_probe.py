@@ -4,6 +4,8 @@ import socket
 import struct
 import subprocess
 import sys
+import threading
+import time
 import unittest
 
 
@@ -48,6 +50,49 @@ class ProcessStopTests(unittest.TestCase):
             with self.subTest(status=status):
                 process = subprocess.Popen([sys.executable, "-c", f"raise SystemExit({status})"])
                 process.wait(timeout=5)
+
+
+class ReadinessTests(unittest.TestCase):
+    def setUp(self):
+        source = "import signal,sys; signal.signal(signal.SIGTERM, lambda *_: sys.exit(0)); print('ready', flush=True); signal.pause()"
+        self.process = subprocess.Popen([sys.executable, "-c", source], stdout=subprocess.PIPE, text=True)
+        self.addCleanup(self.cleanup_process)
+        self.assertEqual(self.process.stdout.readline(), "ready\n")
+
+    def cleanup_process(self):
+        if self.process.poll() is None:
+            self.process.kill()
+        self.process.wait(timeout=5)
+        self.process.stdout.close()
+
+    def test_readiness_retries_a_timed_out_socket_while_owner_is_alive(self):
+        sender, receiver = socket.socketpair()
+        with sender, receiver:
+            receiver.settimeout(0.02)
+            delivery = threading.Timer(0.15, lambda: sender.sendall(b"ready"))
+            delivery.start()
+            try:
+                probe.wait_for(self.process, lambda: receiver.recv(5) == b"ready", "not ready", timeout=2)
+            finally:
+                delivery.join(timeout=2)
+
+    def test_persistent_probe_timeouts_fail_with_the_readiness_context(self):
+        sender, receiver = socket.socketpair()
+        attempts = []
+        with sender, receiver:
+            receiver.settimeout(0.02)
+            def pending():
+                attempts.append(time.monotonic())
+                return receiver.recv(1) == b"ready"
+            with self.assertRaisesRegex(RuntimeError, "Pond is not ready"):
+                probe.wait_for(self.process, pending, "Pond is not ready", timeout=0.3)
+            self.assertGreaterEqual(len(attempts), 2)
+
+    def test_protocol_errors_are_not_converted_to_startup_readiness(self):
+        def invalid():
+            raise ValueError("invalid native protocol")
+        with self.assertRaisesRegex(ValueError, "invalid native protocol"):
+            probe.wait_for(self.process, invalid, "not ready", timeout=1)
                 with self.assertRaisesRegex(RuntimeError, "exited before"):
                     probe.stop(process)
 
