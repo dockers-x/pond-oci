@@ -224,7 +224,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get install -y skopeo
+          sudo apt-get install -y skopeo rsync
           sudo skopeo inspect --config "oci-archive:$RUNNER_TEMP/pond-desktop.oci.tar" \
             | sudo tee "$RUNNER_TEMP/pond-image-report/config.json" > /dev/null
           jq -e --arg version "$IMAGE_VERSION" --arg revision "$GITHUB_SHA" \
@@ -253,6 +253,17 @@ jobs:
             | sudo tee "$RUNNER_TEMP/pond-image-report/layer.json" > /dev/null
           python3 pond-oci/scripts/check-desktop-layer.py \
             --report "$RUNNER_TEMP/pond-image-report/layer.json"
+          final="$RUNNER_TEMP/pond-final-root"
+          sudo mkdir "$final"
+          sudo bsdtar --numeric-owner --xattrs --acls \
+            -xpf "$layout/blobs/sha256/$layer" -C "$final"
+          sudo rsync -aHAXnci --numeric-ids --delete \
+            "$RUNNER_TEMP/pond-image-root/" "$final/" \
+            | tee "$RUNNER_TEMP/pond-image-report/rootfs-differences.txt"
+          if [[ -s "$RUNNER_TEMP/pond-image-report/rootfs-differences.txt" ]]; then
+            printf '::error::Final OCI payload differs from the staged rootfs.\n'
+            exit 1
+          fi
       - name: Preserve the unpublished desktop candidate only on GitHub
         if: inputs.build_candidate && success()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

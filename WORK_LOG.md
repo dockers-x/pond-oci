@@ -16,6 +16,11 @@
   local-context COPY with numeric-owner pax tar + ADD, preserving archive
   ownership rather than flattening the rootfs to root. Re-run the same probe
   including hardlink identity and security.capability before another candidate.
+- Metadata probe 64815ec / 40826409622 is GREEN, including the actual extracted
+  capability bytes and hardlink inode identity. Add a full staged-root vs final
+  layer read-only rsync checksum/owner/mode/link/ACL/xattr comparison to each
+  candidate. Selected executables alone cannot prove the complete packaging
+  boundary. Keep registry publication disabled until the other runtime gates.
 
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 
