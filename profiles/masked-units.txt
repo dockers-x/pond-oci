@@ -11,6 +11,7 @@ ufw.service
 bluetooth.service
 dbus-org.bluez.service
 systemd-timesyncd.service
+systemd-firstboot.service
 dbus-org.freedesktop.timesync1.service
 systemd-boot-clear-sysfail.service
 systemd-boot-update.service

@@ -26,6 +26,13 @@
   this unattended container has no interactive console. Add an explicit seeded
   failed-unit gate before changing the image policy, so a healthy adapter does
   not silently hide a degraded initial system. Missing-seed remains negative.
+- Parsed actual boot 40834726539 is behavioral RED solely on the new healthy-
+  boot gate: systemd-firstboot.service is failed while production adapter JSON
+  verifies changed=[true,false]. Add that interactive service to the explicit
+  Pond container mask policy: LightOS owns initial accounts/settings; do not
+  fake success or add a console solely to satisfy an unrelated interactive path.
+  Rebuild a fresh candidate and later update the accepted-candidate lock before
+  re-running the same real boot test. The old archive stays immutable.
 
 ## 2026-10-29 — Final OCI payload acceptance is GREEN
 
