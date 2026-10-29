@@ -157,16 +157,21 @@ def wait_for(process, predicate, message, timeout=40):
 
 
 def runtime_diagnostics(report):
+    errors = []
     for name in ("desktop.log", "dbus.log"):
         try:
-            descriptor = os.open(RUNTIME / name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        except FileNotFoundError:
-            continue
-        with os.fdopen(descriptor, "rb") as source:
-            metadata = os.fstat(source.fileno())
-            require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == os.geteuid(), "runtime diagnostic must be an owned ordinary file")
-            source.seek(max(0, metadata.st_size - 24000))
-            (report / name).write_bytes(source.read(24000))
+            try:
+                descriptor = os.open(RUNTIME / name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            except FileNotFoundError:
+                continue
+            with os.fdopen(descriptor, "rb") as source:
+                metadata = os.fstat(source.fileno())
+                require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == os.geteuid(), "runtime diagnostic must be an owned ordinary file")
+                source.seek(max(0, metadata.st_size - 24000))
+                (report / name).write_bytes(source.read(24000))
+        except Exception as error:
+            errors.append({"file": name, "error": str(error)})
+    return errors
 
 
 def inside(report):
@@ -236,8 +241,10 @@ def inside(report):
             if owner is not None:
                 cleanup(owner)
         finally:
-            runtime_diagnostics(report)
-            (report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
+            try:
+                evidence["diagnostic_errors"] = runtime_diagnostics(report)
+            finally:
+                (report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
 
 
 def outside(arguments):

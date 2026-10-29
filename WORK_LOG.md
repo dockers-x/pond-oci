@@ -502,3 +502,11 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   and private-bus logs, plus the exact runtime phase. Earlier reports retained
   only the outer owner's diagnostics and lost the children needed to diagnose
   an unresolved startup failure. Do not infer Pond-shell or JPEG success yet.
+
+- Readiness/phase source and real-toolkit profile gates pass at `4e5f977` /
+  `40812967616`. Independent review finds diagnostic collection can still mask
+  the primary failure and prevent evidence writing. Real symlink/FIFO source
+  RED `8491b42` / `40813631836` reproduces both cases without reading rejected
+  content. Keep the no-follow/type/owner/size checks; record per-log optional
+  diagnostic failures, continue the other log, and attempt evidence writing in
+  its own finally. This does not convert a failed native desktop gate to success.
