@@ -31,6 +31,23 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
+def stage_binary(expected, destination, installed=False):
+    require(expected.is_file() and not expected.is_symlink(), "fixture binary must be an ordinary GitHub build output")
+    with expected.open("rb") as source:
+        digest = hashlib.file_digest(source, "sha256").hexdigest()
+    if installed:
+        require(destination.is_file() and not destination.is_symlink() and destination.stat().st_mode & 0o111,
+                "installed binary must be an ordinary executable")
+        with destination.open("rb") as source:
+            require(hashlib.file_digest(source, "sha256").hexdigest() == digest,
+                    "installed binary differs from the reviewed GitHub build")
+    else:
+        require(not destination.exists() and not destination.is_symlink(), "fixture refuses to replace an upstream remote binary")
+        shutil.copyfile(expected, destination)
+        destination.chmod(0o755)
+    return {"mode": "verify-installed" if installed else "stage-build", "sha256": digest}
+
+
 def read_exact(connection, length, deadline=None):
     result = bytearray()
     while len(result) < length:
@@ -319,7 +336,6 @@ def inside(report):
 def outside(arguments):
     require(os.environ.get("GITHUB_ACTIONS") == "true" and os.geteuid() == 0, "remote probe only runs as root on an ephemeral GitHub runner")
     payload.validate_fixture(arguments.root, arguments.report, Path(os.environ["RUNNER_TEMP"]))
-    require(arguments.binary.is_file() and not arguments.binary.is_symlink(), "fixture binary must be an ordinary GitHub build output")
     arguments.report.mkdir(parents=True, exist_ok=True)
     probe = payload.Probe(arguments.root, arguments.report)
     missing = []
@@ -329,9 +345,7 @@ def outside(arguments):
             missing.append(program)
     require(not missing, f"real rootfs is missing remote prerequisites inside its own namespace: {', '.join(missing)}")
     binary = payload.fixture_directory(arguments.root, "usr/lib/lightos-remoted") / "lightos-remoted"
-    require(not binary.exists() and not binary.is_symlink(), "fixture refuses to replace an upstream remote binary")
-    shutil.copyfile(arguments.binary, binary)
-    binary.chmod(0o755)
+    binary_evidence = stage_binary(arguments.binary, binary, installed=arguments.installed)
     source = payload.fixture_directory(arguments.root, "run/pond-ci-src")
     for name in ("probe-remote-desktop.py", "probe-desktop.py"):
         shutil.copyfile(Path(__file__).with_name(name), source / name)
@@ -368,6 +382,7 @@ def outside(arguments):
                 shutil.copyfile(path, arguments.report / name)
     evidence = json.loads((arguments.report / "evidence.json").read_text())
     evidence["initialization"] = initialized
+    evidence["binary"] = binary_evidence
     for generation in (1, 2):
         evidence["phase"] = f"external JPEG {generation} validation"
         (arguments.report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
@@ -388,6 +403,7 @@ def main():
     parser.add_argument("--root", type=Path)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--binary", type=Path)
+    parser.add_argument("--installed", action="store_true")
     arguments = parser.parse_args()
     if arguments.inside:
         inside(arguments.report)
