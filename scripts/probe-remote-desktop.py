@@ -127,6 +127,12 @@ def still_live(expected):
 
 
 def stop(process):
+    require(process.poll() is None, "desktop process exited before the requested normal stop")
+    process.terminate()
+    require(process.wait(timeout=10) == 0, "desktop process returned an unsuccessful status after normal stop")
+
+
+def cleanup(process):
     if process.poll() is None:
         process.terminate()
         try:
@@ -134,7 +140,6 @@ def stop(process):
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
-            raise RuntimeError("desktop process required forced cleanup")
 
 
 def wait_for(process, predicate, message, timeout=40):
@@ -200,9 +205,9 @@ def inside(report):
         evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True)
     finally:
         if transport is not None:
-            stop(transport)
+            cleanup(transport)
         if owner is not None:
-            stop(owner)
+            cleanup(owner)
         (report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
 
 

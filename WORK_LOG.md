@@ -421,3 +421,12 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   inside the disposable namespace and report all missing prerequisites together;
   do not install packages based on this misleading outer-path failure. HTTP
   fixture identity was separately corrected to explicit `lightos` at `60cb422`.
+
+- Independent review finds one P2 in the new fixture: its stop helper accepts
+  early process exit and ignores failure status after TERM. Real subprocess
+  regressions at `81ab9a4` / source run `40805012141` observe three intended
+  failures (early 0/17 and post-TERM 19). Require live-before-TERM and successful
+  exit for acceptance; keep best-effort fallback cleanup separate in `finally`.
+  The accepted remoted binary already returns zero on normal TERM, as required
+  by its previously green actual-owner test. Do not accept a crashed transport
+  as successful reconnect/shutdown merely because its desktop survived.
