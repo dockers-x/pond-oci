@@ -1,5 +1,16 @@
 # Work log
 
+## 2026-10-29 — Verify the packaging boundary, not only desktop rendering
+
+- Candidate 154ba2b / 40824541717 succeeds: native desktop, fresh staging,
+  actual amd64 OCI construction, config and selected final-layer gates all pass.
+  This is an unpublished GitHub artifact, not a LightOS boot/proxy acceptance.
+- Add a GitHub-only behavioral probe using the actual desktop Dockerfile and
+  a tiny rootfs with non-root numeric owners, special modes, hardlinks, an
+  absolute symlink and a security.capability xattr. The existing selected-path
+  gate does not establish preservation of those properties. Run this probe
+  before changing the packaging mechanism; do not download candidate artifacts.
+
 ## 2026-10-29 — Close the native Pond owner gate and stage an unpublished candidate
 
 - Actual syscall evidence from 40819146213, inspected only on GitHub in
