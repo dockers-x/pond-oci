@@ -11,10 +11,10 @@ class ReleaseCandidateTests(unittest.TestCase):
         spec.loader.exec_module(self.release)
 
     def test_rc_version_is_tied_to_the_declared_base(self):
-        self.assertEqual(self.release.version('v0.1.0-rc.1', '0.1.0'), '0.1.0-rc.1')
-        for tag in ('v0.1.0', 'v0.2.0-rc.1', 'v0.1.0-rc.01', 'v0.1.0-rc.0', 'main'):
+        self.assertEqual(self.release.version('v0.1.0-rc.1', '0.1.0', '0.1.0-rc.1'), '0.1.0-rc.1')
+        for tag in ('v0.1.0', 'v0.1.0-rc.2', 'v0.2.0-rc.1', 'v0.1.0-rc.01', 'v0.1.0-rc.0', 'main'):
             with self.subTest(tag=tag), self.assertRaises(ValueError):
-                self.release.version(tag, '0.1.0')
+                self.release.version(tag, '0.1.0', '0.1.0-rc.1')
 
     def test_only_the_version_label_may_change(self):
         original = {'architecture': 'amd64', 'rootfs': {'diff_ids': ['sha256:abc']},
@@ -31,3 +31,6 @@ class ReleaseCandidateTests(unittest.TestCase):
                 self.release.verify_config(original, changed, '0.1.0-rc.1')
         with self.assertRaises(ValueError):
             self.release.verify_config(original, promoted, '0.1.0-rc.2')
+        original['config']['Healthcheck'] = {'Test': ['CMD', 'true']}
+        with self.assertRaises(ValueError):
+            self.release.verify_config(original, promoted, '0.1.0-rc.1')

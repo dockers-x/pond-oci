@@ -63,11 +63,11 @@ jobs:
           sudo apt-get install -y skopeo umoci
           layout="$RUNNER_TEMP/promoted-layout"
           skopeo copy --preserve-digests "oci-archive:$RUNNER_TEMP/source/pond-desktop.oci.tar" "oci:$layout:candidate"
-          skopeo inspect --config "oci:$layout:candidate" > "$RUNNER_TEMP/original-config.json"
+          skopeo inspect --config --raw "oci:$layout:candidate" > "$RUNNER_TEMP/original-config.json"
           skopeo inspect --raw "oci:$layout:candidate" > "$RUNNER_TEMP/original-manifest.json"
           version="$(python3 scripts/release-candidate.py "$GITHUB_REF_NAME")"
           umoci config --no-history --image "$layout:candidate" --config.label "org.opencontainers.image.version=$version"
-          skopeo inspect --config "oci:$layout:candidate" > "$RUNNER_TEMP/promoted-config.json"
+          skopeo inspect --config --raw "oci:$layout:candidate" > "$RUNNER_TEMP/promoted-config.json"
           skopeo inspect --raw "oci:$layout:candidate" > "$RUNNER_TEMP/promoted-manifest.json"
           python3 scripts/release-candidate.py "$GITHUB_REF_NAME" --original "$RUNNER_TEMP/original-config.json" --promoted "$RUNNER_TEMP/promoted-config.json"
           diff <(jq -S .layers "$RUNNER_TEMP/original-manifest.json") <(jq -S .layers "$RUNNER_TEMP/promoted-manifest.json")
@@ -130,7 +130,8 @@ jobs:
           trap 'rm -f "$auth"' EXIT
           printf '%s' "$DOCKERHUB_TOKEN" | skopeo login --authfile "$auth" --username "$DOCKERHUB_USERNAME" --password-stdin docker.io
           printf '%s' "$GH_TOKEN" | skopeo login --authfile "$auth" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
-          version="${GITHUB_REF_NAME#v}"
+          version="$(jq -er .approved_version release/release-candidate.json)"
+          [[ "$GITHUB_REF_NAME" == "v$version" ]]
           expected="$(cat release/manifest.sha256)"
           for image in "docker.io/$DOCKERHUB_IMAGE" "$GHCR_IMAGE"; do
             if skopeo inspect --authfile "$auth" --raw "docker://$image:$version" > "$RUNNER_TEMP/existing.json" 2> "$RUNNER_TEMP/inspect-error"; then
@@ -144,7 +145,7 @@ jobs:
             fi
             skopeo inspect --authfile "$auth" --raw "docker://$image:$version" > "$RUNNER_TEMP/remote-manifest.json"
             [[ "$(sha256sum "$RUNNER_TEMP/remote-manifest.json" | cut -d ' ' -f1)" == "$expected" ]]
-            skopeo inspect --authfile "$auth" --config "docker://$image:$version" > "$RUNNER_TEMP/remote-config.json"
+            skopeo inspect --authfile "$auth" --config --raw "docker://$image:$version" > "$RUNNER_TEMP/remote-config.json"
             diff <(jq -S . release/config.json) <(jq -S . "$RUNNER_TEMP/remote-config.json")
             printf '%s:%s@sha256:%s\n' "$image" "$version" "$expected" >> release/images.txt
           done

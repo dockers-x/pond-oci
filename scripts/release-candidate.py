@@ -7,8 +7,8 @@ import re
 import tomllib
 
 
-def version(tag, base):
-    if not re.fullmatch(re.escape(f'v{base}') + r'-rc\.[1-9][0-9]*', tag):
+def version(tag, base, approved):
+    if tag != f'v{approved}' or not re.fullmatch(re.escape(f'v{base}') + r'-rc\.[1-9][0-9]*', tag):
         raise ValueError('only an RC tag matching image.toml is supported')
     return tag[1:]
 
@@ -31,7 +31,8 @@ def main():
     parser.add_argument('--promoted', type=Path)
     arguments = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    expected = version(arguments.tag, tomllib.loads((root / 'image.toml').read_text())['version'])
+    approved = json.loads((root / 'release-candidate.json').read_text())['approved_version']
+    expected = version(arguments.tag, tomllib.loads((root / 'image.toml').read_text())['version'], approved)
     if arguments.original or arguments.promoted:
         if not (arguments.original and arguments.promoted):
             parser.error('both config paths are required')

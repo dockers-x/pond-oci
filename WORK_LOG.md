@@ -12,6 +12,9 @@
   this is a missing implementation gate, not a behavioral packaging regression.
 - Publication must read back identical manifests/configs from both registries,
   never update stable/latest, and emit a GitHub prerelease with source receipts.
+- Independent review identifies normalized Skopeo config as an exactness blind
+  spot and unrestricted RC numbers as an approval boundary. Capture raw config
+  JSON and require the exact approved_version in the committed release receipt.
 - After publication, user requests a reusable make-your-own-lightos-oci skill
   under /home/czyt/code/others/tinyskills/skills, with Darwin optimization.
 
