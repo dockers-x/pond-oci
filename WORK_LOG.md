@@ -1,5 +1,31 @@
 # Work log
 
+## 2026-10-29 — Final OCI payload acceptance is GREEN
+
+- Accepted recipe b232e24 / GitHub run 40831279349 succeeds through construction,
+  actual config inspection, full staged-vs-final checksums/metadata and exact
+  internal hardlink topology (1153 groups), then final-payload runtime acceptance.
+- The unpacked final OCI payload runs the actual Rust initializer twice:
+  first changed=true, second changed=false, synthetic platform home UID=1000.
+  Its installed remoted is verified without replacement against the same-run
+  reviewed build: de1b8c51ad058ed1fed5f8d8f041a48209fa5a61c57f899c00919e53f33c4e46.
+- Actual final-image Niri and Pond wallpaper/sidebar remain present, with
+  unchanged native configuration and stable owner/Niri/Quickshell identities
+  across two transports. Each decoded JPEG is 1272x688 / 1001 colors; candidate
+  counts are 3 then 1. The owner stops normally; diagnostic_errors is empty.
+- GitHub-only artifact pond-desktop-amd64-candidate is retained for three days
+  (artifact 12878988857, zip size 3503503303). Its inner OCI tar SHA-256 is
+  f2b845004dd282dbb971229d75c25b4ac066ea5a5148dff4022fdd390bf594de.
+  Separate final desktop and original fixture reports remain on GitHub only.
+- Fixed-root-time metadata probe 40830998462 and source/profile 40830997343
+  also pass. Independent focused review finds no new P1/P2 in raw packaging,
+  exact hardlinks or installed runtime probe. No local build/download/test,
+  real account/seed/auth access or actual desktop/service mutation occurs.
+- This closes final OCI construction, preservation and namespace runtime gates,
+  not the overall delivery: real systemd/LightOS firstboot/proxy, launcher/input
+  and application-start, optional FFmpeg/AUR integration and the independent
+  SemVer dual-registry release remain separate. No registry image is published.
+
 ## 2026-10-29 — Verify the packaging boundary, not only desktop rendering
 
 - Candidate 154ba2b / 40824541717 succeeds: native desktop, fresh staging,

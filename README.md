@@ -56,6 +56,14 @@ ACL 和 xattrs 与 staging root 一致；验收后仍需独立测试最终镜像
 实际 LightOS boot/proxy、launcher/app-start、可选 FFmpeg worker
 和双 registry 发布仍需各自验收，不能由上述 native owner 测试替代。
 
+**最终 OCI payload 验收已通过：`40831279349`（recipe `b232e24`）。**
+完整内容与元数据比较为空差异，1153 组内部硬链接保持一致；从最终层解包出的
+rootfs 使用镜像内原有程序完成两次 Rust 初始化（首次修改、再次无修改），并通过
+原生 Niri/Pond sidebar 与两代远程 transport 验收，两次画面均为 1272×688、1001 色。
+此处平台账号仍由隔离 fixture 模拟，Pillow 只放在运行测试的 `/run` 中；封存的
+OCI 不包含测试依赖、测试账号或认证。候选 artifact 名为
+`pond-desktop-amd64-candidate`，仅在 GitHub 保存三天，尚未发布到 GHCR/Docker Hub。
+
 工作流在 runner 中 checkout toolkit、编译 `rootfs-fetch`，再运行
 `scripts/fetch-rootfs.sh`。脚本默认：
 
