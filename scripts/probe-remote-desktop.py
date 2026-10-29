@@ -228,7 +228,7 @@ def inside(report):
         while any(still_live(expected) for expected in identities):
             require(time.monotonic() < deadline, "normal owner shutdown left a live native desktop process before namespace fallback")
             time.sleep(0.1)
-        evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True, phase="accepted")
+        evidence.update(generations=generations, identities=identities, native_config_preserved=True, pond_sidebar_preserved=True, phase="remote capture complete, awaiting external JPEG validation")
     finally:
         try:
             if transport is not None:
@@ -274,11 +274,14 @@ def outside(arguments):
     evidence = json.loads((arguments.report / "evidence.json").read_text())
     evidence["initialization"] = initialized
     for generation in (1, 2):
+        evidence["phase"] = f"external JPEG {generation} validation"
+        (arguments.report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
         frame = arguments.report / f"frame-{generation}.jpg"
         result = subprocess.run(["identify", "-format", "%w %h %k", str(frame)], capture_output=True, text=True, timeout=15, check=True)
         width, height, colors = map(int, result.stdout.split())
         require(width >= 100 and height >= 100 and colors >= 256, "Pond remote stream was uniform or too small")
         evidence["generations"][generation - 1]["decoded_frame"] = {"width": width, "height": height, "colors": colors}
+    evidence["phase"] = "accepted"
     (arguments.report / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
     print(json.dumps(evidence, indent=2))
 
