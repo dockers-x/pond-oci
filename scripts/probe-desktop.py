@@ -156,7 +156,8 @@ class Probe:
         self.prefix = [
             shutil.which("bwrap"), "--unshare-pid", "--unshare-ipc", "--unshare-net",
             "--unshare-uts", "--hostname", "pond-ci", "--die-with-parent",
-            "--bind", str(root), "/", "--proc", "/proc", "--dev", "/dev", "--clearenv",
+            "--bind", str(root), "/", "--proc", "/proc", "--dev", "/dev",
+            "--perms", "1777", "--tmpfs", "/dev/shm", "--clearenv",
             "--setenv", "PATH", "/usr/bin:/usr/sbin:/bin:/sbin",
             "--setenv", "LANG", "C.UTF-8",
         ]
