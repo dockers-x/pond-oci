@@ -4,9 +4,11 @@ import socket
 import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 
 
 specification = importlib.util.spec_from_file_location("remote_probe", Path(__file__).resolve().parents[1] / "scripts/probe-remote-desktop.py")
@@ -119,6 +121,46 @@ class ReadinessTests(unittest.TestCase):
             raise ValueError("invalid native protocol")
         with self.assertRaisesRegex(ValueError, "invalid native protocol"):
             probe.wait_for(self.process, invalid, "not ready", timeout=1)
+
+
+class RuntimeDiagnosticTests(unittest.TestCase):
+    def test_a_rejected_log_does_not_hide_the_other_child_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "runtime"
+            report = root / "report"
+            runtime.mkdir()
+            report.mkdir()
+            unrelated = root / "private-fixture"
+            unrelated.write_text("not-for-diagnostics\n")
+            (runtime / "desktop.log").symlink_to(unrelated)
+            (runtime / "dbus.log").write_text("safe private-bus fixture\n")
+            with patch.object(probe, "RUNTIME", runtime):
+                errors = probe.runtime_diagnostics(report)
+            self.assertEqual(errors[0]["file"], "desktop.log")
+            self.assertFalse((report / "desktop.log").exists())
+            self.assertEqual((report / "dbus.log").read_text(), "safe private-bus fixture\n")
+            self.assertNotIn("not-for-diagnostics", str(errors))
+            self.assertEqual(unrelated.read_text(), "not-for-diagnostics\n")
+
+    def test_rejected_diagnostics_do_not_replace_the_primary_failure_or_phase(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "runtime"
+            report = root / "report"
+            runtime.mkdir()
+            report.mkdir()
+            os.mkfifo(runtime / "desktop.log")
+            evidence = {"phase": "native sidebar readiness"}
+            with patch.object(probe, "RUNTIME", runtime), self.assertRaisesRegex(ValueError, "primary native failure"):
+                try:
+                    raise ValueError("primary native failure")
+                finally:
+                    evidence["diagnostic_errors"] = probe.runtime_diagnostics(report)
+                    (report / "evidence.json").write_text(json.dumps(evidence))
+            document = json.loads((report / "evidence.json").read_text())
+            self.assertEqual(document["phase"], "native sidebar readiness")
+            self.assertEqual(document["diagnostic_errors"][0]["file"], "desktop.log")
 
 
 if __name__ == "__main__":
