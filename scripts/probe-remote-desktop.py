@@ -4,6 +4,7 @@ import argparse
 import base64
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -58,6 +59,15 @@ def receive_frame(connection):
     return first & 15, read_exact(connection, length)
 
 
+def decoded_frame(content):
+    from PIL import Image
+
+    with Image.open(io.BytesIO(content)) as image:
+        require(image.format == "JPEG" and 0 < image.width <= 4096 and 0 < image.height <= 4096, "invalid or oversized desktop JPEG")
+        colors = image.convert("RGB").getcolors(maxcolors=256)
+        return {"width": image.width, "height": image.height, "colors": len(colors) if colors is not None else 257}
+
+
 def capture(port, destination):
     with socket.create_connection(("127.0.0.1", port), timeout=3) as connection:
         connection.settimeout(2)
@@ -75,6 +85,8 @@ def capture(port, destination):
         expected = base64.b64encode(hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()).digest()).decode()
         require(fields.get("sec-websocket-accept") == expected, "invalid upgrade acceptance")
         ready = None
+        frame_id = None
+        candidates = 0
         deadline = time.monotonic() + 20
         while time.monotonic() < deadline:
             opcode, content = receive_frame(connection)
@@ -87,11 +99,21 @@ def capture(port, destination):
                     require(message.get("resize") is False and message.get("resize_scale") is False, "native owner advertised unsupported resize")
                     ready = message
                     send_frame(connection, 1, b'{"type":"video","codec":"jpeg"}')
+                elif message.get("type") == "frame_id":
+                    frame_id = message.get("id")
+                    require(type(frame_id) is int and 0 <= frame_id < 2**64, "invalid remote frame identity")
             elif opcode == 2 and content[:1] == b"\x01":
                 require(ready is not None and content[1:3] == b"\xff\xd8", "frame was not a ready JPEG stream")
+                decoded = decoded_frame(content[1:])
+                candidates += 1
+                if frame_id is not None:
+                    send_frame(connection, 1, json.dumps({"type": "frame_ack", "id": frame_id}).encode())
+                    frame_id = None
                 destination.write_bytes(content[1:])
+                if min(decoded["width"], decoded["height"]) < 100 or decoded["colors"] < 256:
+                    continue
                 send_frame(connection, 8, struct.pack("!H", 1000))
-                return {name: ready.get(name) for name in ("desktop", "desktop_backend", "width", "height", "resize", "resize_scale")}
+                return dict({name: ready.get(name) for name in ("desktop", "desktop_backend", "width", "height", "resize", "resize_scale")}, candidate_frames=candidates)
             elif opcode == 8:
                 raise RuntimeError("remote transport closed before a JPEG frame")
         raise RuntimeError("remote transport did not deliver a frame before the fixture deadline")

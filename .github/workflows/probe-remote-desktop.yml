@@ -149,7 +149,7 @@ jobs:
             --dir /run/systemd/resolve \
             --ro-bind /etc/resolv.conf /run/systemd/resolve/stub-resolv.conf --clearenv \
             --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \
-            /usr/bin/pacman -Syu --noconfirm --needed cage
+            /usr/bin/pacman -Syu --noconfirm --needed cage python-pillow
           sudo bwrap --unshare-pid --unshare-ipc --unshare-net --unshare-uts \
             --die-with-parent --bind "$root" / --proc /proc --dev /dev --clearenv \
             --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \

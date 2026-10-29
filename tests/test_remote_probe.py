@@ -89,7 +89,8 @@ class RemoteCaptureTests(unittest.TestCase):
                 with patch.object(probe.socket, "create_connection", return_value=client), patch.object(probe, "decoded_frame", side_effect=decode, create=True), patch.object(probe, "send_frame", wraps=probe.send_frame) as sent:
                     probe.capture(1234, destination)
                 self.assertEqual(destination.read_bytes(), b"\xff\xd8painted", "a uniform first JPEG is not a painted desktop")
-                acknowledgements = [json.loads(call.args[2]) for call in sent.call_args_list if call.args[1] == 1]
+                messages = [json.loads(call.args[2]) for call in sent.call_args_list if call.args[1] == 1]
+                acknowledgements = [message for message in messages if message.get("type") == "frame_ack"]
                 self.assertEqual(acknowledgements, [{"type": "frame_ack", "id": 1}, {"type": "frame_ack", "id": 2}])
         finally:
             stopped.set()
