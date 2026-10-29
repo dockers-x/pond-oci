@@ -474,3 +474,16 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   after restore and revalidates the digest; save only follows that successful
   validation and precedes runtime mutations. This removes repeated large public
   downloads without caching account state, test reports or initialized rootfs.
+
+- Resolver-target run `40808148330` passes mount/DNS and reaches native pacman,
+  which rejects an absent public keyring and unknown Pond repository key. The
+  accepted Rust tool gains explicit offline preparation instead of a shell
+  initializer, signature bypass or forged platform marker: `eea666f`, full
+  toolkit CI `40809926162`, all 26 CLI runtime cases and independent review.
+  Pin that exact implementation and prepare local Arch/Pond public trust before
+  the package transaction; runtime apply keeps its existing platform prerequisite.
+- Actual cleaner regression `161a4ae` / `40810680011` fails because the previous
+  recipe retains synthetic build-private GPG state. Add an explicit cleanup rule
+  for `etc/pacman.d/gnupg`, retaining packaged public rings and leaving all
+  platform/user initialization markers absent. Package signing remains enforced;
+  the changed recipe still needs its new source/profile and real-payload gates.

@@ -97,6 +97,8 @@ jobs:
           sudo bsdtar --numeric-owner --acls --xattrs -xpf "pond-oci/.cache/$ROOTFS_SHA256/pond-rootfs.tar.zst" -C "$root"
           sudo "$tools/rootfs-cleaner" mark --root "$root"
           sudo install -d -m 0755 "$RUNNER_TEMP/pond-remote-report"
+          sudo "$tools/lighos-init" prepare-keyrings --root "$root" \
+            --config pond-oci/profiles/lightos.toml --apply
           sudo ls -ld "$root/etc/resolv.conf"
           sudo bwrap --unshare-pid --unshare-ipc --unshare-uts --hostname pond-package-ci \
             --die-with-parent --bind "$root" / --proc /proc --dev /dev \

@@ -68,9 +68,12 @@ digest="$(python3 -c 'import json; print(json.load(open("rootfs.lock.json"))["sh
   --select usr/share/wayland-sessions > .cache/inspection.json
 ```
 
-默认 `profiles/cleanup.toml` 只移除实例身份/已知 SSH host keys/包下载缓存，
+默认 `profiles/cleanup.toml` 只移除实例身份/已知 SSH host keys/包下载缓存与临时构建 GPG 状态，
 不盲删内核、firmware、Nix、Flatpak 或桌面组件。
 它不是包卸载器，保留 pacman 数据库完整性；更激进的包精简需要真实 rootfs 审计后的独立配方。
+包安装前使用已验收的 Rust `lighos-init prepare-keyrings` 在独立 namespace 准备公开 trust，
+不伪造平台成功标记；包事务后删除本地 GPG 私钥/信任数据库，保留 `/usr/share/pacman/keyrings`。
+每个实例由平台重建 Arch 基础 trust，再由 post-setup hook 恢复配方声明的 Pond keyring。
 禁止把清理工具指向正在运行的系统。
 已核验的真实 payload 摘要见 `docs/rootfs-audit.md`；机器身份清理不代表软件包已卸载。
 `profiles/masked-units.txt` 是 **Pond 配方**的初版容器隔离策略，正在按桌面目标复核。

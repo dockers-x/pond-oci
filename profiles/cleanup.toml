@@ -25,6 +25,10 @@ path = "var/cache/pacman/pkg"
 reason = "Downloaded package archives are not installed package payloads"
 
 [[remove]]
+path = "etc/pacman.d/gnupg"
+reason = "Build-time local GPG private/trust state must be rebuilt per instance from packaged public keyrings"
+
+[[remove]]
 path = "etc/ssh/ssh_host_rsa_key"
 reason = "SSH host private keys must be unique per instance"
 
