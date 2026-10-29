@@ -445,3 +445,11 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   keep lockfile/toolchain/native-build environment hashing. Cargo still builds
   the selected source normally; this does not download artifacts locally or
   substitute a cache hit for runtime acceptance.
+
+- Package-preparation RED `40805866335` stops before pacman: bubblewrap cannot
+  create `/etc/resolv.conf` because its runtime symlink destination has no
+  parent directory in the extracted rootfs. Create the private package
+  namespace's `/run/systemd/resolve` parent before the single read-only resolver
+  bind and print only the public rootfs link metadata. Do not replace the
+  upstream link or bind the runner's complete `/etc` or `/run`. The package
+  signature, repository and desktop gates have not executed yet.

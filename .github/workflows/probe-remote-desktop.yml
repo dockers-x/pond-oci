@@ -95,8 +95,10 @@ jobs:
           sudo bsdtar --numeric-owner --acls --xattrs -xpf "pond-oci/.cache/$ROOTFS_SHA256/pond-rootfs.tar.zst" -C "$root"
           sudo "$tools/rootfs-cleaner" mark --root "$root"
           sudo install -d -m 0755 "$RUNNER_TEMP/pond-remote-report"
+          sudo ls -ld "$root/etc/resolv.conf"
           sudo bwrap --unshare-pid --unshare-ipc --unshare-uts --hostname pond-package-ci \
             --die-with-parent --bind "$root" / --proc /proc --dev /dev \
+            --dir /run/systemd/resolve \
             --ro-bind /etc/resolv.conf /etc/resolv.conf --clearenv \
             --setenv PATH /usr/bin:/bin --setenv LANG C.UTF-8 \
             /usr/bin/pacman -Syu --noconfirm --needed cage
