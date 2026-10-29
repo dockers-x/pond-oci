@@ -2,13 +2,46 @@ name: Probe real Pond shell through remote desktop
 
 on:
   workflow_dispatch:
+    inputs:
+      inspect_run:
+        description: Inspect an existing fixture report on GitHub instead of rebuilding
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
+  inspect-report:
+    if: github.server_url == 'https://github.com' && inputs.inspect_run != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - name: Inspect only bounded synthetic fixture diagnostics on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBE_RUN: ${{ inputs.inspect_run }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_SERVER_URL:-}" == https://github.com && -z "${ACT:-}" ]]
+          [[ "$PROBE_RUN" =~ ^[0-9]+$ ]]
+          report="$RUNNER_TEMP/prior-probe-report"
+          gh run download "$PROBE_RUN" --repo "$REPOSITORY" --name pond-remote-desktop-report --dir "$report"
+          token="$(cat /proc/sys/kernel/random/uuid)"
+          trap 'printf "::%s::\n" "$token"' EXIT
+          printf '::stop-commands::%s\n' "$token"
+          trace="$report/native-syscalls.log"
+          [[ -f "$trace" && ! -L "$trace" ]]
+          printf '\n--- Buffer, device and socket failures ---\n'
+          awk '/\/dev\/shm|memfd_create|ftruncate|EACCES|ENOSPC|ENOMEM|ECONN|EPIPE/ && count++ < 100 {print substr($0, 1, 400)}' "$trace"
+          printf '\n--- Startup failures ---\n'
+          head -c 20000 -- "$trace"
   remote-desktop:
-    if: github.server_url == 'https://github.com'
+    if: github.server_url == 'https://github.com' && inputs.inspect_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
