@@ -468,3 +468,9 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   rootfs owns the absolute link, while bubblewrap owns mount setup. Bind directly
   at the observed runtime target instead of asking setup to follow the alias.
   The rootfs link remains unchanged; no extra host configuration is exposed.
+
+- Cache only the public compressed rootfs archive on GitHub under its exact
+  SHA-256 key, with no fallback keys. The normal Rust fetch step always runs
+  after restore and revalidates the digest; save only follows that successful
+  validation and precedes runtime mutations. This removes repeated large public
+  downloads without caching account state, test reports or initialized rootfs.

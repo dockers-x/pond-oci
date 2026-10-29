@@ -68,10 +68,22 @@ jobs:
           node-version: '24'
       - name: Build reviewed static Rust commands only on GitHub
         run: cargo +stable build --locked --release --manifest-path oci-kit/Cargo.toml --workspace --bins --target x86_64-unknown-linux-musl
+      - name: Restore only the locked public archive on GitHub
+        id: rootfs-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: pond-oci/.cache/${{ steps.metadata.outputs.rootfs_sha256 }}/pond-rootfs.tar.zst
+          key: pond-rootfs-${{ steps.metadata.outputs.rootfs_sha256 }}
       - name: Download the verified locked rootfs only on GitHub
         env:
           ROOTFS_FETCH: ${{ github.workspace }}/oci-kit/target/x86_64-unknown-linux-musl/release/rootfs-fetch
         run: bash pond-oci/scripts/fetch-rootfs.sh --locked
+      - name: Cache the successfully verified archive before runtime preparation
+        if: steps.rootfs-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: pond-oci/.cache/${{ steps.metadata.outputs.rootfs_sha256 }}/pond-rootfs.tar.zst
+          key: pond-rootfs-${{ steps.metadata.outputs.rootfs_sha256 }}
       - name: Prepare a disposable runtime root, never an image build context
         env:
           ROOTFS_SHA256: ${{ steps.metadata.outputs.rootfs_sha256 }}
