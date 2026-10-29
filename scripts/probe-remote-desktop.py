@@ -31,9 +31,14 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
-def read_exact(connection, length):
+def read_exact(connection, length, deadline=None):
     result = bytearray()
     while len(result) < length:
+        if deadline is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("remote frame deadline expired")
+            connection.settimeout(remaining)
         fragment = connection.recv(length - len(result))
         require(fragment, "remote connection ended before a complete frame")
         result.extend(fragment)
@@ -47,16 +52,16 @@ def send_frame(connection, opcode, content):
     connection.sendall(bytes((0x80 | opcode, 0x80 | len(content))) + mask + masked)
 
 
-def receive_frame(connection):
-    first, second = read_exact(connection, 2)
+def receive_frame(connection, deadline=None):
+    first, second = read_exact(connection, 2, deadline)
     require(first & 0x80 and not first & 0x70 and not second & 0x80, "unsupported server frame flags")
     length = second & 127
     if length == 126:
-        length = struct.unpack("!H", read_exact(connection, 2))[0]
+        length = struct.unpack("!H", read_exact(connection, 2, deadline))[0]
     elif length == 127:
-        length = struct.unpack("!Q", read_exact(connection, 8))[0]
+        length = struct.unpack("!Q", read_exact(connection, 8, deadline))[0]
     require(length <= 32 * 1024 * 1024, "oversized remote frame")
-    return first & 15, read_exact(connection, length)
+    return first & 15, read_exact(connection, length, deadline)
 
 
 def decoded_frame(content):
@@ -89,7 +94,7 @@ def capture(port, destination):
         candidates = 0
         deadline = time.monotonic() + 20
         while time.monotonic() < deadline:
-            opcode, content = receive_frame(connection)
+            opcode, content = receive_frame(connection, deadline)
             if opcode == 9:
                 send_frame(connection, 10, content)
             elif opcode == 1:
