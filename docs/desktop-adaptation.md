@@ -91,11 +91,18 @@ This is not a launcher click/app-start or real systemd/LightOS acceptance.
 2. Native shell startup, actual rendered frame and display-bound IPC query
    pass. Launcher/app-start interaction remains open. No real seed or platform
    authentication is needed or permitted in those fixtures.
+   The audited Mod+Space binding calls vicinae toggle; sidebar.toggle only
+   expands/collapses the sidebar. A future native-input fixture must observe
+   the real launcher and a previously absent application window/process, not
+   infer app-start from command exit0, an early launch log or screenshot hashes.
+   Welcome-layer dismissal and accessibility labels must first be checked
+   against the locked payload, not assumed from current upstream QML.
 3. A persistent native Niri owner remains required: preserve per-user includes
    and the compositor's application environment, and prove reconnect/transport
-   upgrade leaves the desktop and its applications alive. The user deferred
-   further remoted-owner research; do not substitute its current Hyprland owner or
-   treat an empty Niri instance as completion.
+   upgrade leaves the desktop and its applications alive. The native-owner
+   seam is now resumed narrowly as a direct image dependency; unrelated
+   codec/cursor/AUR research stays out of scope. Do not substitute the current
+   Hyprland owner or treat an empty Niri instance as completion.
 4. Verify the explicit device policy on actual service processes without
    changing host device permissions. Numeric-policy generation is accepted,
    but real process credentials/GPU rendering have not been exercised here.

@@ -1,5 +1,21 @@
 # Work log
 
+## 2026-10-29 — Separate native shell queries from launcher/app-start evidence
+
+- Bounded independent read-only review confirms that the payload-audited
+  Mod+Space binding invokes vicinae toggle, while sidebar.toggle only changes
+  sidebar expansion. Existing IPC-query/frame success proves neither launcher
+  selection nor application startup. Current upstream QML is not proof of the
+  pinned payload's exported accessibility labels or welcome-dismiss behavior.
+- Keep native-input acceptance explicit: dismiss the observed welcome layer,
+  observe the real launcher, select an installed desktop entry and verify a
+  new visible application window with matching process identity. Reject early
+  spawn logs, command exit0 and screenshot-hash changes as success criteria.
+- Update the resumed dependency boundary: remoted Niri configuration/doctor
+  interface is accepted by 40787218608/2f43e31; private environment publishing
+  is being implemented after missing-action RED 40790727648/52e2030. Persistent
+  owner and desktop-image publishing remain unaccepted; no build is enabled.
+
 ## 2026-10-29 — Bind launcher diagnostics to the real compositor display
 
 - Runtime 40738943260 reports a real Quickshell instance on wayland-1 but
