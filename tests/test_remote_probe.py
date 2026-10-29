@@ -51,7 +51,7 @@ class RemoteFrameTests(unittest.TestCase):
 
 
 class RemoteCaptureTests(unittest.TestCase):
-    def test_capture_waits_for_a_painted_frame_and_acknowledges_each_candidate(self):
+    def capture_fixture(self, painted_delay):
         server, client = socket.socketpair()
         stopped = threading.Event()
         failures = []
@@ -74,6 +74,8 @@ class RemoteCaptureTests(unittest.TestCase):
                         (2, b"\x01\xff\xd8painted"),
                     ]
                     for opcode, content in messages:
+                        if content.endswith(b"painted"):
+                            time.sleep(painted_delay)
                         server.sendall(bytes((0x80 | opcode, len(content))) + content)
                     stopped.wait(timeout=5)
             except Exception as error:
@@ -98,6 +100,12 @@ class RemoteCaptureTests(unittest.TestCase):
             client.close()
         self.assertFalse(worker.is_alive())
         self.assertEqual(failures, [])
+
+    def test_capture_waits_for_a_painted_frame_and_acknowledges_each_candidate(self):
+        self.capture_fixture(0)
+
+    def test_capture_accepts_a_painted_frame_after_the_initial_socket_timeout(self):
+        self.capture_fixture(2.2)
 
 
 class ProcessStopTests(unittest.TestCase):
