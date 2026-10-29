@@ -312,6 +312,11 @@ def outside(arguments):
     destination.chmod(0o700)
     os.chown(destination, payload.USER_ID, payload.USER_ID)
     initialized = probe.initialize()
+    probe.prefix = [
+        shutil.which("strace"), "-f", "-e", "trace=%file,memfd_create,ftruncate,connect",
+        "-e", "status=failed", "-o", str(arguments.report / "native-syscalls.log"),
+        *probe.prefix,
+    ]
     try:
         probe.run(["/usr/bin/env", "GITHUB_ACTIONS=true", "/usr/bin/python", "/run/pond-ci-src/probe-remote-desktop.py", "--inside", "--report", "/run/pond-remote-report"], user=True, timeout=180)
     except Exception:
