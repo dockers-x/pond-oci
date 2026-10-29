@@ -13,6 +13,27 @@ SERVICES = (
 
 @unittest.skipUnless(os.environ.get("LIGHTOS_INIT_BINARY"), "requires the GitHub-built Rust toolkit")
 class LightOSProfileTests(unittest.TestCase):
+    def test_cleanup_removes_build_trust_state_but_preserves_packaged_public_rings(self):
+        cleaner = os.environ["ROOTFS_CLEANER_BINARY"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "rootfs"
+            private = root / "etc/pacman.d/gnupg/private-keys-v1.d/fixture.key"
+            private.parent.mkdir(parents=True)
+            private.write_text("synthetic build-private state\n")
+            public = root / "usr/share/pacman/keyrings/pond.gpg"
+            public.parent.mkdir(parents=True)
+            public.write_text("packaged public fixture\n")
+            for arguments in (
+                ["mark", "--root", str(root)],
+                ["clean", "--root", str(root), "--policy", str(ROOT / "profiles/cleanup.toml"), "--apply"],
+            ):
+                result = subprocess.run([cleaner, *arguments], capture_output=True, text=True, timeout=20)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((root / "etc/pacman.d/gnupg").exists(), "build-time GPG private/trust state must not ship")
+            self.assertEqual(public.read_text(), "packaged public fixture\n")
+            self.assertFalse((root / "var/lib/lightos/initialized").exists())
+            self.assertFalse((root / "var/lib/oci-kit").exists())
+
     def test_the_actual_pond_profile_orders_both_services_without_activating_them(self):
         for settings_present in (False, True):
             with self.subTest(settings_present=settings_present):
