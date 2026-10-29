@@ -1,4 +1,6 @@
 import importlib.util
+import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -46,6 +48,55 @@ class RemoteFrameTests(unittest.TestCase):
         for header in (b"\x01\x00", b"\xc1\x00", b"\x81\x80"):
             with self.subTest(header=header), self.assertRaisesRegex(RuntimeError, "flags"):
                 self.frame(header)
+
+
+class RemoteCaptureTests(unittest.TestCase):
+    def test_capture_waits_for_a_painted_frame_and_acknowledges_each_candidate(self):
+        server, client = socket.socketpair()
+        stopped = threading.Event()
+        failures = []
+
+        def serve():
+            try:
+                with server:
+                    server.settimeout(3)
+                    header = bytearray()
+                    while not header.endswith(b"\r\n\r\n"):
+                        header.extend(probe.read_exact(server, 1))
+                    key = next(line.split(b":", 1)[1].strip() for line in header.split(b"\r\n") if line.startswith(b"Sec-WebSocket-Key:"))
+                    acceptance = base64.b64encode(hashlib.sha1(key + b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest())
+                    server.sendall(b"HTTP/1.1 101 Switching Protocols\r\nSec-WebSocket-Accept: " + acceptance + b"\r\n\r\n")
+                    messages = [
+                        (1, b'{"type":"ready","resize":false,"resize_scale":false}'),
+                        (1, b'{"type":"frame_id","id":1}'),
+                        (2, b"\x01\xff\xd8uniform"),
+                        (1, b'{"type":"frame_id","id":2}'),
+                        (2, b"\x01\xff\xd8painted"),
+                    ]
+                    for opcode, content in messages:
+                        server.sendall(bytes((0x80 | opcode, len(content))) + content)
+                    stopped.wait(timeout=5)
+            except Exception as error:
+                failures.append(error)
+
+        worker = threading.Thread(target=serve)
+        worker.start()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                destination = Path(directory) / "frame.jpg"
+                def decode(content):
+                    return {"width": 1280, "height": 720, "colors": 1 if content.endswith(b"uniform") else 300}
+                with patch.object(probe.socket, "create_connection", return_value=client), patch.object(probe, "decoded_frame", side_effect=decode, create=True), patch.object(probe, "send_frame", wraps=probe.send_frame) as sent:
+                    probe.capture(1234, destination)
+                self.assertEqual(destination.read_bytes(), b"\xff\xd8painted", "a uniform first JPEG is not a painted desktop")
+                acknowledgements = [json.loads(call.args[2]) for call in sent.call_args_list if call.args[1] == 1]
+                self.assertEqual(acknowledgements, [{"type": "frame_ack", "id": 1}, {"type": "frame_ack", "id": 2}])
+        finally:
+            stopped.set()
+            worker.join(timeout=5)
+            client.close()
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(failures, [])
 
 
 class ProcessStopTests(unittest.TestCase):
