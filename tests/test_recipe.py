@@ -52,7 +52,7 @@ class RecipeTests(unittest.TestCase):
         })
 
     def test_build_downloads_the_reviewed_lock_without_refreshing_it(self):
-        workflow = (ROOT / ".github/workflows/build.yml").read_text()
+        workflow = (ROOT / ".github/workflows/_build-desktop.yml").read_text()
         downloads = re.findall(r"run: (bash pond-oci/scripts/fetch-rootfs\.sh[^\n]*)", workflow)
         self.assertEqual(downloads, ["bash pond-oci/scripts/fetch-rootfs.sh --locked"])
 

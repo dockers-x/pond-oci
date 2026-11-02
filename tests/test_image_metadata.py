@@ -54,6 +54,14 @@ class ImageMetadataTests(unittest.TestCase):
                 self.assertEqual(result.stdout, "")
                 self.assertIn("release tag", result.stderr)
 
+    def test_automatic_rc_label_does_not_require_committing_a_version_file(self):
+        result = self.metadata('--image-version', '0.1.5-rc.1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['version'], '0.1.5-rc.1')
+        for version in ('0.1.5', 'v0.1.5-rc.1', '0.1.5-rc.01', 'latest'):
+            with self.subTest(version=version):
+                self.assertNotEqual(self.metadata('--image-version', version).returncode, 0)
+
     def test_numeric_revision_prefix_with_a_leading_zero_is_valid_semver(self):
         revision = "012345678901" + "a" * 28
         result = self.metadata("--revision", revision)

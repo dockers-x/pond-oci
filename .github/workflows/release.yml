@@ -1,0 +1,85 @@
+name: Release Pond image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pond-image-release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      mode: ${{ steps.plan.outputs.mode }}
+    steps:
+      - name: Require the main branch
+        run: '[[ "$GITHUB_REF" == refs/heads/main ]] || { echo "::error::Select main when running Release Pond image"; exit 1; }'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check effective registry credentials
+        env:
+          HAS_USERNAME: ${{ secrets.DOCKERHUB_USERNAME != '' }}
+          HAS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+        run: '[[ "$HAS_USERNAME" == true && "$HAS_TOKEN" == true ]]'
+      - run: python3 -m unittest discover -s tests -v
+      - name: Resolve upstream and allocate or resume an immutable version
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/plan-release.py --output "$RUNNER_TEMP/release-plan.json"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.mode == 'build'
+    uses: ./.github/workflows/_build-desktop.yml
+    with:
+      release_plan: ${{ needs.plan.outputs.plan }}
+
+  publish:
+    needs: [plan, build]
+    if: always() && needs.plan.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      packages: write
+      actions: read
+    env:
+      RELEASE_PLAN: ${{ needs.plan.outputs.plan }}
+      DOCKERHUB_IMAGE: ${{ vars.DOCKER_IMAGE || secrets.DOCKER_IMAGE || format('{0}/pond-oci', secrets.DOCKERHUB_USERNAME) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y skopeo
+      - name: Restore the exact artifact and verify actual systemd boot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release-image.py prepare
+      - name: Publish or resume both registries and complete the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          REGISTRY_AUTH_FILE: ${{ runner.temp }}/registry-auth.json
+        run: |
+          set -euo pipefail
+          trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
+          printf '%s' "$DOCKERHUB_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$DOCKERHUB_USERNAME" --password-stdin docker.io
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          python3 scripts/release-image.py publish
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: pond-systemd-release-report
+          path: ${{ runner.temp }}/pond-systemd-report
+          if-no-files-found: ignore
+          retention-days: 7

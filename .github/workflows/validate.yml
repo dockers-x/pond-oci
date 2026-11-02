@@ -3,7 +3,6 @@ name: Validate recipe
 on:
   push:
   pull_request:
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,7 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - run: python3 -m unittest discover -s tests -v
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes= .github/workflows/*.yml
       - run: bash -n scripts/fetch-rootfs.sh scripts/build.sh scripts/stage-desktop.sh scripts/probe-packaging.sh scripts/package-desktop.sh scripts/probe-systemd.sh tests/fixtures/pond-ci-platform-setup.sh
+  packaging:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y libarchive-tools attr acl libcap2-bin umoci skopeo
+      - run: sudo env GITHUB_ACTIONS=true GITHUB_SERVER_URL="$GITHUB_SERVER_URL" RUNNER_TEMP="$RUNNER_TEMP" bash scripts/probe-packaging.sh
   toolkit-profile:
     runs-on: ubuntu-latest
     timeout-minutes: 20

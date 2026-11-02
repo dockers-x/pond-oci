@@ -1,66 +1,26 @@
-name: Probe real Pond shell through remote desktop
+name: Internal desktop build
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      inspect_run:
-        description: Inspect an existing fixture report on GitHub instead of rebuilding
-        required: false
+      release_plan:
+        required: true
         type: string
       build_candidate:
         description: Build an unpublished amd64 desktop OCI candidate after the real desktop probe passes
-        default: false
+        default: true
         type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  inspect-report:
-    if: github.server_url == 'https://github.com' && inputs.inspect_run != ''
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      actions: read
-    steps:
-      - name: Inspect only bounded synthetic fixture diagnostics on GitHub
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PROBE_RUN: ${{ inputs.inspect_run }}
-          REPOSITORY: ${{ github.repository }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_SERVER_URL:-}" == https://github.com && -z "${ACT:-}" ]]
-          [[ "$PROBE_RUN" =~ ^[0-9]+$ ]]
-          report="$RUNNER_TEMP/prior-probe-report"
-          gh run download "$PROBE_RUN" --repo "$REPOSITORY" --name pond-remote-desktop-report --dir "$report"
-          if ! command -v identify >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y imagemagick
-          fi
-          token="$(cat /proc/sys/kernel/random/uuid)"
-          trap 'printf "::%s::\n" "$token"' EXIT
-          printf '::stop-commands::%s\n' "$token"
-          trace="$report/native-syscalls.log"
-          [[ -f "$trace" && ! -L "$trace" ]]
-          printf '\n--- Buffer, device and socket failures ---\n'
-          awk '/\/dev\/shm|memfd_create|ftruncate|EACCES|ENOSPC|ENOMEM|ECONN|EPIPE/ && count++ < 100 {print substr($0, 1, 400)}' "$trace"
-          printf '\n--- Startup failures ---\n'
-          head -c 20000 -- "$trace"
-          for generation in 1 2; do
-            frame="$report/frame-$generation.jpg"
-            if [[ -f "$frame" && ! -L "$frame" ]]; then
-              printf '\n--- Remote JPEG %s ---\n' "$generation"
-              identify -limit memory 128MiB -limit map 256MiB -format '%w %h colors=%k mean=%[fx:mean] stddev=%[fx:standard_deviation]\n' "$frame"
-            fi
-          done
   remote-desktop:
-    if: github.server_url == 'https://github.com' && inputs.inspect_run == ''
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
-      REMOTED_REVISION: 78acffa733bb3ffe7ef10d214ab525602f996454
+      REMOTED_REVISION: ${{ fromJSON(inputs.release_plan).identity.remoted_revision }}
       CC_x86_64_unknown_linux_musl: musl-gcc
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
       TURBOJPEG_SOURCE: vendor
@@ -82,7 +42,13 @@ jobs:
           persist-credentials: false
       - name: Read exact reviewed inputs
         id: metadata
-        run: python3 pond-oci/scripts/image-metadata.py --revision "$GITHUB_SHA" --format github >> "$GITHUB_OUTPUT"
+        env:
+          SOURCE_LOCK: ${{ toJSON(fromJSON(inputs.release_plan).source) }}
+          IMAGE_VERSION: ${{ fromJSON(inputs.release_plan).version }}
+        run: |
+          set -euo pipefail
+          python3 -c 'import json,os,pathlib; pathlib.Path("pond-oci/rootfs.lock.json").write_text(json.dumps(json.loads(os.environ["SOURCE_LOCK"]), indent=2) + "\n")'
+          python3 pond-oci/scripts/image-metadata.py --revision "$GITHUB_SHA" --image-version "$IMAGE_VERSION" --format github >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ca-x/oci-kit
@@ -288,7 +254,7 @@ jobs:
             ${{ runner.temp }}/pond-image-report
           compression-level: 0
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 14
       - name: Print bounded remote desktop diagnostic tails
         if: always()
         shell: bash

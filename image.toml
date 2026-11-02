@@ -1,3 +1,4 @@
 schema_version = 1
 version = "0.1.0"
 kit_revision = "eea666f1a0c34e536328762d8d21f75d08a1c642"
+remoted_revision = "78acffa733bb3ffe7ef10d214ab525602f996454"
