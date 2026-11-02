@@ -24,8 +24,11 @@ def plan(source, revision, image, tags, releases):
             tag = release['tag_name']
             if not TAG.fullmatch(tag) or receipt.get('version') != tag[1:]:
                 raise ValueError('release receipt/tag mismatch')
-            if not re.fullmatch(r'[0-9a-f]{64}', receipt.get('manifest_sha256', '')):
-                raise ValueError('invalid recorded manifest digest')
+            if any(not isinstance(receipt.get(key), str) or not re.fullmatch(r'[0-9a-f]{64}', receipt[key])
+                   for key in ('manifest_sha256', 'config_sha256', 'archive_sha256')):
+                raise ValueError('invalid recorded image digest')
+            if type(receipt.get('artifact_run')) is not int or receipt['artifact_run'] <= 0:
+                raise ValueError('invalid recorded artifact run')
             result = {key: receipt[key] for key in ('version', 'manifest_sha256', 'config_sha256', 'archive_sha256', 'artifact_run')}
             return dict(result, identity=identity, source=source, tag=tag,
                         mode='resume' if release['draft'] else 'existing')

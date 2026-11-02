@@ -52,6 +52,15 @@ def receipt(repository, tag):
                               f'repos/{repository}/releases/assets/{asset["id"]}'))
 
 
+def existing_receipt(repository, tag):
+    try:
+        return receipt(repository, tag)
+    except subprocess.CalledProcessError as error:
+        if b'HTTP 404' not in error.stderr:
+            raise
+        return None
+
+
 def prepare(plan, directory, repository, images):
     directory.mkdir()
     old = receipt(repository, plan['tag']) if plan['mode'] != 'build' else None
@@ -71,7 +80,7 @@ def prepare(plan, directory, repository, images):
         from_artifact = False
         for image in images:
             try:
-                command('skopeo', 'copy', '--preserve-digests',
+                command('skopeo', 'copy', '--authfile', os.environ['REGISTRY_AUTH_FILE'], '--preserve-digests',
                         f'docker://{image}@sha256:{old["manifest_sha256"]}', f'oci-archive:{archive}')
                 break
             except subprocess.CalledProcessError:
@@ -99,20 +108,32 @@ def prepare(plan, directory, repository, images):
     (directory / 'archive.sha256').write_text(result['archive_sha256'] + '  pond-desktop.oci.tar\n')
 
 
+def verify_tag(plan, repository):
+    tag = plan['tag']
+    try:
+        reference = json.loads(command('gh', 'api', f'repos/{repository}/git/ref/tags/{tag}'))
+    except subprocess.CalledProcessError as error:
+        if b'HTTP 404' not in error.stderr:
+            raise
+        if plan['mode'] == 'existing':
+            raise ValueError('completed release tag disappeared') from error
+        reference = json.loads(command('gh', 'api', '--method', 'POST', f'repos/{repository}/git/refs',
+                                       '-f', f'ref=refs/tags/{tag}', '-f', f'sha={plan["identity"]["recipe_revision"]}'))
+    if reference['object']['type'] != 'commit' or reference['object']['sha'] != plan['identity']['recipe_revision']:
+        raise ValueError('refusing to move an existing release tag')
+
+
 def publish(plan, directory, repository, images, auth):
     record = json.loads((directory / 'release.json').read_text())
     tag = plan['tag']
+    verify_tag(plan, repository)
     if plan['mode'] != 'existing':
-        try:
-            reference = json.loads(command('gh', 'api', f'repos/{repository}/git/ref/tags/{tag}'))
-        except subprocess.CalledProcessError as error:
-            if b'HTTP 404' not in error.stderr:
-                raise
-            reference = json.loads(command('gh', 'api', '--method', 'POST', f'repos/{repository}/git/refs',
-                                           '-f', f'ref=refs/tags/{tag}', '-f', f'sha={plan["identity"]["recipe_revision"]}'))
-        if reference['object']['type'] != 'commit' or reference['object']['sha'] != plan['identity']['recipe_revision']:
-            raise ValueError('refusing to move an existing release tag')
-        if plan['mode'] == 'build':
+        previous = existing_receipt(repository, tag)
+        if previous is not None and previous != record:
+            raise ValueError('existing release receipt differs; refusing to overwrite it')
+        if plan['mode'] == 'resume' and previous is None:
+            raise ValueError('pending release disappeared; refusing to recreate it')
+        if previous is None:
             notes = directory / 'notes.md'
             notes.write_text(
                 f'Pond Desktop {tag} — experimental linux/amd64\n\n'

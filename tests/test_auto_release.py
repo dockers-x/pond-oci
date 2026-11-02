@@ -2,6 +2,8 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('release_plan', ROOT / 'scripts/plan-release.py')
@@ -50,6 +52,28 @@ class AutoReleaseTests(unittest.TestCase):
         self.source['sha256'] = 'latest'
         with self.assertRaises(ValueError):
             self.plan()
+
+    def test_all_receipt_digests_and_artifact_run_are_validated(self):
+        receipt = self.plan()
+        receipt.update(manifest_sha256='e' * 64, config_sha256='f' * 64,
+                       archive_sha256='0' * 64, artifact_run=123)
+        for key, value in [('config_sha256', 'bad'), ('archive_sha256', None),
+                           ('artifact_run', True), ('artifact_run', 0)]:
+            broken = dict(receipt, **{key: value})
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                self.plan([receipt['tag']], [dict(tag_name=receipt['tag'], draft=True, receipt=broken)])
+
+    def test_release_lookup_only_treats_404_as_missing(self):
+        with patch.object(publisher, 'receipt', return_value={'version': '0.1.5-rc.1'}):
+            self.assertEqual(publisher.existing_receipt('owner/repo', 'tag'), {'version': '0.1.5-rc.1'})
+        for message in (b'HTTP 404', b'HTTP 403', b'HTTP 429'):
+            error = subprocess.CalledProcessError(1, ['gh'], stderr=message)
+            with patch.object(publisher, 'receipt', side_effect=error):
+                if message == b'HTTP 404':
+                    self.assertIsNone(publisher.existing_receipt('owner/repo', 'tag'))
+                else:
+                    with self.assertRaises(subprocess.CalledProcessError):
+                        publisher.existing_receipt('owner/repo', 'tag')
 
     def test_auth_and_network_errors_are_not_missing_tags(self):
         self.assertTrue(publisher.missing_manifest(b'manifest unknown'))

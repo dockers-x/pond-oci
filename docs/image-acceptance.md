@@ -5,19 +5,23 @@
   real Niri/Pond shell startup, capture/input and LightOS proxy authentication
   before claiming completion. A virtual graphical desktop is not a headless
   deliverable. Physical VT mode is optional and has separate mapped-device,
-  PAM/logind/D-Bus acceptance. The superseded headless workflow is suspended.
+  PAM/logind/D-Bus acceptance. The superseded headless workflow is removed.
 - All rootfs/dependency downloads, builds and executable acceptance run in
   GitHub Actions. Local work edits/reviews source, pushes over SSH and reads
   workflow status/logs. Do not download rootfs or image artifacts locally.
 - Build and publish only `linux/amd64`. There is no ARM matrix, QEMU or claim
   that the x86-64 upstream artifact supports another architecture.
-- Normal builds consume the committed `rootfs.lock.json` without refreshing it.
-  Latest discovery remains a separate explicit update step; review a changed
-  hash before publishing an image made from it. Never execute upstream Python.
+- The single manual `release.yml` resolves the upstream declaration once and
+  freezes it in a plan. Its internal build consumes that exact lock, without a
+  second discovery. Never execute upstream Python.
 - The image has its own SemVer, initially `0.1.0`; the upstream SHA-256 is
-  provenance, not a version. `image.toml` fixes the planned version and toolkit
-  commit. A formal `vX.Y.Z` tag must match that version exactly. Untagged builds
-  use a development prerelease, never the formal version tag.
+  provenance, not a version. `image.toml` fixes the base version and toolkit/
+  remoted commits. The planner allocates the next unused PATCH with `-rc.1`
+  above existing SemVer tags. Do not publish stable/latest until real platform
+  acceptance is complete. No manual candidate lock or tag is required.
+- A draft receipt fixes the exact artifact and registry digests before pushes.
+  Re-dispatch or rerun failed jobs resumes it; completed identities are readback
+  only. Never replace tags or overwrite a different registry manifest.
 - A published version fixes rootfs hash, toolkit commit and recipe commit.
   Do not overwrite an existing version tag. Rootfs-only updates normally bump
   PATCH; compatible features bump MINOR and breaking contracts bump MAJOR.

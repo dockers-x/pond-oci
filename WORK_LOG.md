@@ -717,3 +717,15 @@ successful LightOS account/keyring/Niri/VT/PAM/logind startup.
   the original native failure, even when this comparison renders successfully.
   This distinguishes a changed package/config baseline from parent/backend
   integration without repeating the rootfs download and package transaction.
+
+## 2026-11-02 — One-click upstream release
+
+- Replaced multiple manual probe/publish entrypoints and expiring candidate locks
+  with Release Pond image: resolve once, allocate downstream SemVer RC, build all
+  desktop/fidelity gates, boot systemd, tag and publish the same OCI to both registries.
+- Removed obsolete workflows; retained internal build and automatic validation.
+- Independent review found draft visibility, completed-tag integrity and authenticated
+  recovery gaps; corrected permissions, universal tag verification and registry auth.
+- Added strict receipt validation and existing-draft reuse for failed-job reruns.
+- Initial implementation 57854e7 passed GitHub Validate recipe run 41404584074.
+  Follow-up changes await GitHub validation and a complete release exercise.

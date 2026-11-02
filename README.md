@@ -2,7 +2,35 @@
 
 Pond rootfs → OCI 的薄配方，使用 `ca-x/oci-kit`，不修改上游 ISO installer。
 **唯一交付目标是带 Niri 桌面的 LightOS 镜像，不提供 headless 版本。**
-旧 headless 构建工作流已暂停，不能将其构建成功当作桌面完成；桌面适配与验收正在补齐。
+旧 headless 工作流已删除；当前发布保留桌面验收，真实 LightOS 外部集成仍需单独验证。
+
+## 一键发布
+
+1. 打开 GitHub → Actions → **Release Pond image**。
+2. 点击 **Run workflow**，选择 **main**，直接运行；没有必填参数，不需要自己打 tag。
+3. 等待 plan → build → publish 完成，在运行 Summary 查看版本、两端镜像地址及 digest。
+
+也可以仅从本地发起远程运行：
+
+```sh
+gh workflow run release.yml --repo dockers-x/pond-oci --ref main
+gh run list --repo dockers-x/pond-oci --workflow release.yml
+```
+
+上游目前只有 rootfs SHA256，没有可直接沿用的 SemVer。Action 自动解析上游最新声明，
+冻结 rootfs、recipe、toolkit、remoted 提交，再从已有 tag 分配下一个 PATCH 的
+`vX.Y.Z-rc.1`（例如已有 `v0.1.4` 时分配 `v0.1.5-rc.1`）。不会移动旧 tag，
+也不发布 `latest`/stable：真实 LightOS proxy/auth、launcher 和物理 VT/GPU 尚未验收。
+
+完成全部构建/桌面/元数据/systemd 门禁后，自动打 tag，并向 Docker Hub 与 GHCR
+发布同一个 amd64 OCI manifest，最后公开 GitHub prerelease。
+同一上游和同一配方已经发布时只回读验证，不重复构建。
+部分推送失败时重新运行同一 Action，会从 draft 的不可变收据恢复原版本；
+也支持 **Re-run failed jobs**。请勿手动移动 tag、删除 draft 或覆盖其收据。
+候选归档保留 14 天；过期后只有某个 registry 已存在对应 digest 才能恢复。
+
+现在仅保留三个工作流：手动 `release.yml`、内部 `_build-desktop.yml`、
+push/PR 自动执行的 `validate.yml`。旧的多个 probe/publish 入口不再使用。
 
 ## 分工
 
@@ -15,46 +43,25 @@ Pond rootfs → OCI 的薄配方，使用 `ca-x/oci-kit`，不修改上游 ISO i
 
 **所有下载、依赖安装、Rust 编译、OCI 打包及运行验收均在 GitHub Actions 完成。**
 本地只编辑、审阅和通过 SSH 推送源码，以及查看工作流状态；不在本机下载 rootfs 或构建产物。
-当前先对锁定的真实 payload 进行远程桌面入口审计，不触发旧 headless 镜像构建：
-
-```sh
-gh workflow run audit-desktop.yml --repo dockers-x/pond-oci --ref main
-gh run list --repo dockers-x/pond-oci --workflow audit-desktop.yml
-```
-
-锁定 payload 的隔离运行验收使用独立手动工作流：
-
-```sh
-gh workflow run probe-desktop.yml --repo dockers-x/pond-oci --ref main
-gh run list --repo dockers-x/pond-oci --workflow probe-desktop.yml
-```
-
-它在 GitHub 内创建 synthetic 账号并运行真实 Rust 初始化两次，再启动原生
+内部构建在 GitHub 内创建 synthetic 账号并运行真实 Rust 初始化两次，再启动原生
 Niri/Pond 配置；不消费宿主 seed/auth，不把初始化后的目录用于镜像构建。
 已有运行仍在执行时应继续观察同一 run，不重复 dispatch。
-失败诊断自动输出到日志；历史报告也可通过 `inspect-probe.yml` 的 `run_id`
-输入在 GitHub 端读取，不把 rootfs 或报告下载到用户机器。
+失败诊断自动输出到日志，不把 rootfs 或报告下载到用户机器。
 初始化、完整桌面和实际 LightOS 启动是三个不同验收层级。
 
 真实 native owner 验收 `40821662911` 已通过：保留 Pond sidebar，两个 transport
 代次解码出 1272×688、1053 色画面，owner/Niri/Quickshell 身份保持不变。
-可使用同一工作流在桌面验收成功后构建**未发布候选镜像**：
-
-```sh
-gh workflow run probe-remote-desktop.yml --repo dockers-x/pond-oci --ref main -f build_candidate=true
-```
-
 候选构建从锁定归档重新提取全新 root，不打包 synthetic 账号、认证或初始化状态；
-只在 GitHub 保留 amd64 OCI artifact，不推送 registry，也不等同于正式 Release。
-`scripts/package-desktop.sh` 是桌面 OCI 打包入口；旧 `Dockerfile`/`build.yml` 仍暂停。
+在 GitHub 保留 amd64 OCI artifact，由通过门禁的发布 job 推送双 registry。
+`scripts/package-desktop.sh` 是桌面 OCI 打包入口；旧 `Dockerfile` 不用于发布。
 打包直接封装数字 UID/GID 的 pax tar 为 OCI layer，不让构建器解包再重打包：真实检查
 已证明 `COPY` 会重置所有权，而 `ADD` 仍丢失部分 ACL。使用 `umoci raw add-layer`
-保留原始 layer，并检查其 diff_id 等于源 tar 的 SHA-256。GitHub 的 `probe-packaging.yml`
+保留原始 layer，并检查其 diff_id 等于源 tar 的 SHA-256。GitHub 的 `validate.yml`
 检查真实入口的根目录权限、UID/GID、ACL、特殊权限、硬链接、软链接及 capability。
 完整候选还需解包最终 OCI layer，以只读 rsync 校验全目录内容、所有权、权限、链接、
 ACL 和 xattrs 与 staging root 一致；验收后仍需独立测试最终镜像内的初始化与桌面。
 实际 LightOS boot/proxy、launcher/app-start、可选 FFmpeg worker
-和双 registry 发布仍需各自验收，不能由上述 native owner 测试替代。
+仍需各自验收；双 registry raw manifest/config 在发布时独立回读。
 
 **最终 OCI payload 验收已通过：`40831279349`（recipe `b232e24`）。**
 完整内容与元数据比较为空差异，1153 组内部硬链接保持一致；从最终层解包出的
@@ -62,7 +69,8 @@ rootfs 使用镜像内原有程序完成两次 Rust 初始化（首次修改、�
 原生 Niri/Pond sidebar 与两代远程 transport 验收，两次画面均为 1272×688、1001 色。
 此处平台账号仍由隔离 fixture 模拟，Pillow 只放在运行测试的 `/run` 中；封存的
 OCI 不包含测试依赖、测试账号或认证。候选 artifact 名为
-`pond-desktop-amd64-candidate`，仅在 GitHub 保存三天，尚未发布到 GHCR/Docker Hub。
+`pond-desktop-amd64-candidate`，仅在 GitHub 保存 14 天。以上 run 是历史验收，
+不替代本次上游版本的重新构建及验证。
 
 工作流在 runner 中 checkout toolkit、编译 `rootfs-fetch`，再运行
 `scripts/fetch-rootfs.sh`。脚本默认：

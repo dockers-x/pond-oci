@@ -13,6 +13,9 @@ concurrency:
 
 jobs:
   plan:
+    permissions:
+      contents: write
+      actions: read
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -60,11 +63,7 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y skopeo
-      - name: Restore the exact artifact and verify actual systemd boot
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/release-image.py prepare
-      - name: Publish or resume both registries and complete the GitHub release
+      - name: Verify systemd boot and publish or resume both registries
         env:
           GH_TOKEN: ${{ github.token }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -75,6 +74,7 @@ jobs:
           trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
           printf '%s' "$DOCKERHUB_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$DOCKERHUB_USERNAME" --password-stdin docker.io
           printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
+          python3 scripts/release-image.py prepare
           python3 scripts/release-image.py publish
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
