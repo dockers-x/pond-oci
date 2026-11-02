@@ -138,9 +138,11 @@ GitHub prerelease `v0.1.0-rc.1` 保留来源、配置与摘要 receipts。
 
 ## 镜像构建
 
-原 headless 构建入口保持关闭；下面的旧内部入口不是当前桌面 RC 的构建方式。
-桌面构建使用 `probe-remote-desktop.yml` 的候选流程、`scripts/package-desktop.sh` 保真封装，
-再由 `probe-systemd.yml` 验收和 `publish-rc.yml` 晋级发布，不通过旧 Dockerfile 重建成品。
+桌面发布使用 `release.yml` 调用 `_build-desktop.yml`，由
+`scripts/package-desktop.sh` 保真封装，再由 `scripts/release-image.py` 完成
+systemd 验收和双 registry 发布，不通过旧 Dockerfile 重建成品。
+
+以下旧构建脚本说明仅作历史实现记录，不是发布入口；请使用文首的一键发布。
 
 Actions runner 提供 Docker + Buildx，以及相邻的 `oci-kit` 源码。
 工作流通过以下内部入口构建；脚本不安装/启动本机 daemon，

@@ -4,6 +4,9 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 import subprocess
+import json
+import tempfile
+import os
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('release_plan', ROOT / 'scripts/plan-release.py')
@@ -74,6 +77,40 @@ class AutoReleaseTests(unittest.TestCase):
                 else:
                     with self.assertRaises(subprocess.CalledProcessError):
                         publisher.existing_receipt('owner/repo', 'tag')
+
+    def test_completed_release_rejects_missing_or_moved_tag(self):
+        plan = dict(self.plan(), mode='existing')
+        missing = subprocess.CalledProcessError(1, ['gh'], stderr=b'HTTP 404')
+        moved = json.dumps({'object': {'type': 'commit', 'sha': 'e' * 40}}).encode()
+        for outcome in (missing, moved):
+            with patch.object(publisher, 'command', side_effect=[outcome]) as command:
+                with self.assertRaises(ValueError):
+                    publisher.verify_tag(plan, 'owner/repo')
+                self.assertEqual(command.call_count, 1)
+
+    def test_failed_publish_job_reuses_existing_draft_without_recreating_it(self):
+        plan = self.plan()
+        manifest = b'{"schemaVersion":2}'
+        config = b'{}'
+        record = dict(manifest_sha256=publisher.digest(manifest), config_sha256=publisher.digest(config))
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            (directory / 'release.json').write_text(json.dumps(record))
+            def command(*arguments):
+                if arguments[:2] == ('skopeo', 'inspect'):
+                    return config if '--config' in arguments else manifest
+                if arguments[:3] == ('gh', 'release', 'view'):
+                    return b'{"isDraft":false,"isPrerelease":true}'
+                if arguments[:3] == ('gh', 'release', 'edit'):
+                    return b''
+                self.fail(f'unexpected mutation: {arguments}')
+            with patch.object(publisher, 'verify_tag'), \
+                    patch.object(publisher, 'existing_receipt', return_value=record), \
+                    patch.object(publisher, 'validate_config'), \
+                    patch.object(publisher, 'command', side_effect=command), \
+                    patch.dict(os.environ, GITHUB_STEP_SUMMARY=str(directory / 'summary')):
+                publisher.publish(plan, directory, 'owner/repo', ['docker.io/owner/image', 'ghcr.io/owner/image'], 'auth')
+            self.assertIn(plan['tag'], (directory / 'summary').read_text())
 
     def test_auth_and_network_errors_are_not_missing_tags(self):
         self.assertTrue(publisher.missing_manifest(b'manifest unknown'))
